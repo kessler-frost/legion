@@ -64,7 +64,7 @@ iPhone RTSP stream → `cv2.VideoCapture(rtsp_url)` → ArUco + YOLO26 (same fra
 
 ## Tech Stack
 
-- Python 3.12+
+- Python 3.12+, managed with `uv` (not pip/venv)
 - OpenCV (`opencv-contrib-python` for ArUco)
 - Ultralytics YOLO26 (CoreML export)
 - claude-agent-sdk (reasoning)
@@ -99,3 +99,4 @@ Primary reference for all CyberBrick firmware work:
 - Bot telemetry publishes to `legion/bot/{id}/telemetry`
 - Use `pathlib.Path` for all file/directory paths
 - When using Claude programmatically, use `claude-agent-sdk`, not the `anthropic` package
+- Use `uv` for Python dependency management (not pip/venv). Run `uv sync` to install, `uv run` to execute.
