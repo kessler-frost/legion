@@ -84,6 +84,13 @@ legion/
 └── docs/plans/         # Design docs
 ```
 
+## CyberBrick Reference
+
+Primary reference for all CyberBrick firmware work:
+- **Official repo**: [CyberBrick-Official/CyberBrick_Controller_Core](https://github.com/CyberBrick-Official/CyberBrick_Controller_Core) — contains MotorsController, ServosController, boot.py, bbl/ drivers
+- **API docs**: [makerworld.com/en/cyberbrick/api-doc/](https://makerworld.com/en/cyberbrick/api-doc/)
+- **Community WiFi example**: [shuwn/CyberBrick_V7RC_Controller](https://github.com/shuwn/CyberBrick_V7RC_Controller)
+
 ## Conventions
 
 - ArUco marker IDs map 1:1 to MQTT bot IDs
