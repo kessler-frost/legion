@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legion Bot Control</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            gap: 2rem;
+        }
+        h1 { font-size: 1.5rem; font-weight: 600; }
+        #status {
+            padding: 0.4rem 1rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        #status.ok { background: #16a34a33; color: #4ade80; }
+        #status.err { background: #dc262633; color: #f87171; }
+        .controls {
+            display: grid;
+            grid-template-areas:
+                ".  up   ."
+                "lt stop rt"
+                ".  dn   .";
+            gap: 0.75rem;
+        }
+        .controls button {
+            width: 5rem;
+            height: 5rem;
+            border: none;
+            border-radius: 1rem;
+            background: #16213e;
+            color: #eee;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: background 0.1s;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        .controls button:active, .controls button.active {
+            background: #0f3460;
+        }
+        #btn-up    { grid-area: up; }
+        #btn-down  { grid-area: dn; }
+        #btn-left  { grid-area: lt; }
+        #btn-right { grid-area: rt; }
+        #btn-stop  { grid-area: stop; font-size: 0.85rem; background: #7f1d1d; }
+        #btn-stop:active, #btn-stop.active { background: #991b1b; }
+        #btn-kick {
+            width: 100%;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 1rem;
+            background: #1e3a5f;
+            color: #eee;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background 0.1s;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        #btn-kick:active { background: #2563eb; }
+    </style>
+</head>
+<body>
+    <h1>Legion Bot Control</h1>
+    <div id="status" class="err">disconnected</div>
+
+    <div class="controls">
+        <button id="btn-up" data-action="forward">&#9650;</button>
+        <button id="btn-left" data-action="left">&#9664;</button>
+        <button id="btn-stop" data-action="stop">STOP</button>
+        <button id="btn-right" data-action="right">&#9654;</button>
+        <button id="btn-down" data-action="backward">&#9660;</button>
+    </div>
+
+    <button id="btn-kick">Kick</button>
+
+    <script>
+        const BOT_ID = 1;
+        const SPEED = 1500;
+
+        async function sendCommand(action, params = {}) {
+            const res = await fetch(`/bot/${BOT_ID}/command`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action, params }),
+            });
+            return res.ok;
+        }
+
+        // Direction buttons: send on press, stop on release
+        document.querySelectorAll("[data-action]").forEach((btn) => {
+            const action = btn.dataset.action;
+            const params = action === "stop" ? {} : { speed: SPEED };
+
+            function start(e) {
+                e.preventDefault();
+                btn.classList.add("active");
+                sendCommand(action, params);
+            }
+            function end(e) {
+                e.preventDefault();
+                btn.classList.remove("active");
+                if (action !== "stop") sendCommand("stop");
+            }
+
+            btn.addEventListener("pointerdown", start);
+            btn.addEventListener("pointerup", end);
+            btn.addEventListener("pointerleave", end);
+        });
+
+        // Kick button
+        document.getElementById("btn-kick").addEventListener("click", () => {
+            sendCommand("kick");
+        });
+
+        // Status polling
+        async function checkStatus() {
+            const el = document.getElementById("status");
+            const res = await fetch(`/bot/${BOT_ID}/status`).catch(() => null);
+            if (res && res.ok) {
+                const data = await res.json();
+                el.textContent = data.connected ? "connected" : "waiting for bot";
+                el.className = data.connected ? "ok" : "err";
+            } else {
+                el.textContent = "server offline";
+                el.className = "err";
+            }
+        }
+        checkStatus();
+        setInterval(checkStatus, 3000);
+    </script>
+</body>
+</html>

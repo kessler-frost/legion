@@ -25,3 +25,13 @@ async def test_post_command_invalid_action_returns_422():
             json={"action": "fly", "params": {}},
         )
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_root_serves_html():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/")
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "Legion" in response.text
