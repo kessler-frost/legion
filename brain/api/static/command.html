@@ -222,6 +222,7 @@
             <div class="input-area">
                 <input type="text" id="cmd-input" placeholder="type a command..." autocomplete="off">
                 <button class="send-btn" onclick="sendText()">send</button>
+                <button class="send-btn" id="stop-btn" onclick="interruptBrain()" style="border-color:var(--danger);color:var(--danger)">stop</button>
                 <button class="mic-btn" id="mic-btn" onclick="toggleMic()">mic</button>
                 <button class="mic-btn" id="auto-btn" onclick="toggleAutoListen()">auto</button>
             </div>
@@ -341,6 +342,11 @@
 
         connectBrain();
 
+        // --- Interrupt ---
+        async function interruptBrain() {
+            await fetch("/brain/interrupt", { method: "POST" });
+        }
+
         // --- Text input ---
         async function sendText() {
             const text = cmdInput.value.trim();
@@ -396,8 +402,8 @@
         let audioContext = null;
         let analyser = null;
         let silenceStart = null;
-        const SILENCE_THRESHOLD = 0.01;
-        const SILENCE_DURATION = 3000; // 3 seconds
+        const SILENCE_THRESHOLD = 0.015;
+        const SILENCE_DURATION = 1000; // 1 second
 
         async function toggleAutoListen() {
             if (autoListening) {
@@ -441,29 +447,29 @@
         function startAutoRecording() {
             if (!autoListening) return;
 
-            const rec = new MediaRecorder(autoStream);
+            const rec = new MediaRecorder(autoStream, { mimeType: "audio/webm" });
             const chunks = [];
             let speaking = false;
             silenceStart = null;
 
-            rec.ondataavailable = (e) => chunks.push(e.data);
+            rec.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
             rec.onstop = async () => {
                 if (speaking && chunks.length > 0) {
-                    const blob = new Blob(chunks, { type: "audio/wav" });
+                    const blob = new Blob(chunks, { type: "audio/webm" });
                     const form = new FormData();
-                    form.append("audio", blob, "recording.wav");
+                    form.append("audio", blob, "recording.webm");
                     addMessage({ type: "status", text: "transcribing..." });
                     await fetch("/brain/listen", { method: "POST", body: form });
                 }
-                if (autoListening) startAutoRecording();
+                if (autoListening) setTimeout(startAutoRecording, 100);
             };
 
-            rec.start();
+            rec.start(250); // collect data every 250ms
 
             const check = setInterval(() => {
                 if (!autoListening) {
                     clearInterval(check);
-                    rec.stop();
+                    if (rec.state === "recording") rec.stop();
                     return;
                 }
                 const rms = getRMS();
@@ -474,7 +480,7 @@
                     silenceStart = Date.now();
                 } else if (speaking && silenceStart && Date.now() - silenceStart > SILENCE_DURATION) {
                     clearInterval(check);
-                    rec.stop();
+                    if (rec.state === "recording") rec.stop();
                 }
             }, 100);
         }

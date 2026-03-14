@@ -100,8 +100,22 @@ def unsubscribe(q: asyncio.Queue):
     _subscribers.remove(q)
 
 
+_processing = False
+
+
 async def send_command(text: str):
+    global _processing
+    # If brain is processing, interrupt it first
+    if _processing and _client:
+        _broadcast({"type": "status", "text": "interrupting..."})
+        await _client.interrupt()
     await _input_queue.put(text)
+
+
+async def interrupt_brain():
+    if _processing and _client:
+        _broadcast({"type": "status", "text": "interrupted"})
+        await _client.interrupt()
 
 
 async def send_audio(audio_bytes: bytes):
@@ -145,6 +159,8 @@ async def run_brain(model: str = DEFAULT_MODEL):
             text = await _input_queue.get()
             _broadcast({"type": "user", "text": text})
 
+            global _processing
+            _processing = True
             try:
                 await client.query(text)
                 async for message in client.receive_response():
@@ -158,3 +174,4 @@ async def run_brain(model: str = DEFAULT_MODEL):
                                 _broadcast({"type": "tool_result", "text": str(block.content)})
             except Exception as e:
                 _broadcast({"type": "error", "text": str(e)})
+            _processing = False

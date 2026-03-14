@@ -113,6 +113,13 @@ async def brain_history():
     return get_history()
 
 
+@app.post("/brain/interrupt")
+async def brain_interrupt():
+    from brain.reasoning.brain import interrupt_brain
+    await interrupt_brain()
+    return {"status": "interrupted"}
+
+
 @app.post("/brain/send")
 async def brain_send(body: dict):
     from brain.reasoning.brain import send_command

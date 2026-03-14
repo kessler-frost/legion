@@ -221,6 +221,13 @@ def _vision_thread(source, yolo_model, depth_model):
 
     print("Vision started")
 
+    # Depth runs in its own thread to avoid blocking YOLO
+    depth_executor = ThreadPoolExecutor(max_workers=1) if depth_model else None
+    latest_depth_map = [None]  # mutable container for sharing between threads
+
+    def _run_depth(frame):
+        latest_depth_map[0] = _estimate_depth(depth_model, frame)
+
     while not _stop_event.is_set():
         ret, frame = cap.read()
         if not ret:
@@ -230,18 +237,21 @@ def _vision_thread(source, yolo_model, depth_model):
         # Always update raw frame for smooth streaming
         set_raw_frame(frame)
 
-        # Run full pipeline
+        # Run ArUco + YOLO (fast)
         bots = _detect_aruco(frame)
         detected_objects, yolo_results = _detect_yolo(yolo_model, frame)
+
+        # Kick off depth in background (non-blocking)
+        if depth_executor:
+            depth_executor.submit(_run_depth, frame)
 
         # Match to persistent registry
         all_objects = _match_to_registry(detected_objects)
 
-        # Depth
-        depth_map = None
+        # Use latest available depth map (may be from previous frame)
         distances = []
-        if depth_model and (bots or all_objects):
-            depth_map = _estimate_depth(depth_model, frame)
+        depth_map = latest_depth_map[0]
+        if depth_map is not None and (bots or all_objects):
             if bots and all_objects:
                 distances = _compute_distances(bots, all_objects, depth_map)
 
@@ -273,8 +283,10 @@ def start_vision(source=DEFAULT_SOURCE):
     print("Vision: loading models...")
     yolo_model = YOLO("yoloe-26s-seg-pf.pt")
 
-    # Depth disabled for now — CoreML may be causing stalls
     depth_model = None
+    if DEPTH_MODEL_PATH.exists():
+        depth_model = ct.models.MLModel(str(DEPTH_MODEL_PATH))
+        print("Vision: depth model loaded")
 
     thread = threading.Thread(
         target=_vision_thread,
