@@ -84,6 +84,28 @@ legion/
 └── docs/plans/         # Design docs
 ```
 
+## CLI (`legion`)
+
+```bash
+# Start web server (FastAPI + joystick UI)
+legion serve
+legion serve --port 8080
+
+# Move a bot — bot_id, angle (degrees), speed (0-2048), duration (seconds)
+legion move 1 0 1500 2.0        # bot 1, forward, speed 1500, 2s
+legion move 1 90 1000 0.5       # bot 1, right
+legion move 1 180 800 1.0       # bot 1, backward
+legion move 1 270 1200 0.5      # bot 1, left
+
+# Kick — bot_id, duration (seconds)
+legion kick 1 1.0
+
+# Emergency stop
+legion stop 1
+```
+
+Angle mapping: 0°=forward, 90°=right, 180°=backward, 270°=left. All commands auto-stop after the specified duration.
+
 ## CyberBrick Reference
 
 Primary reference for all CyberBrick firmware work:
