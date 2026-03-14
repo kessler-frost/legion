@@ -109,8 +109,8 @@
 
         /* Chat panel */
         .chat-panel {
-            width: 420px;
-            min-width: 420px;
+            width: 520px;
+            min-width: 520px;
             display: flex;
             flex-direction: column;
             border-left: 1px solid var(--border);
@@ -161,9 +161,17 @@
         /* Input area */
         .input-area {
             display: flex;
+            flex-wrap: wrap;
             gap: 0.5rem;
             padding: 0.75rem 1rem;
             border-top: 1px solid var(--border);
+        }
+        .input-area input {
+            min-width: 0;
+        }
+        .input-buttons {
+            display: flex;
+            gap: 0.5rem;
         }
         .input-area input {
             flex: 1;
@@ -220,11 +228,13 @@
         <div class="chat-panel">
             <div class="messages" id="messages"></div>
             <div class="input-area">
-                <input type="text" id="cmd-input" placeholder="type a command..." autocomplete="off">
-                <button class="send-btn" onclick="sendText()">send</button>
-                <button class="send-btn" id="stop-btn" onclick="interruptBrain()" style="border-color:var(--danger);color:var(--danger)">stop</button>
-                <button class="mic-btn" id="mic-btn" onclick="toggleMic()">mic</button>
-                <button class="mic-btn" id="auto-btn" onclick="toggleAutoListen()">auto</button>
+                <input type="text" id="cmd-input" placeholder="type a command..." autocomplete="off" style="width:100%">
+                <div class="input-buttons">
+                    <button class="send-btn" onclick="sendText()">send</button>
+                    <button class="send-btn" id="stop-btn" onclick="interruptBrain()" style="border-color:var(--danger);color:var(--danger)">stop</button>
+                    <button class="mic-btn" id="mic-btn" onclick="toggleMic()">mic</button>
+                    <button class="mic-btn" id="auto-btn" onclick="toggleAutoListen()">auto</button>
+                </div>
             </div>
         </div>
     </div>
