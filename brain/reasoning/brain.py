@@ -70,26 +70,33 @@ async def run(voice: bool = False, model: str = DEFAULT_MODEL):
     print("Type 'quit' or 'exit' to stop. Ctrl+C also works.")
     print("---")
 
-    async with ClaudeSDKClient(options=options) as client:
-        while not shutdown.is_set():
-            try:
-                text = await asyncio.wait_for(input_queue.get(), timeout=0.5)
-            except asyncio.TimeoutError:
-                continue
+    try:
+        async with ClaudeSDKClient(options=options) as client:
+            while not shutdown.is_set():
+                try:
+                    text = await asyncio.wait_for(input_queue.get(), timeout=0.5)
+                except asyncio.TimeoutError:
+                    continue
 
-            if text in ("quit", "exit"):
-                break
+                if text in ("quit", "exit"):
+                    break
 
-            print(f"> {text}")
+                print(f"> {text}")
 
-            await client.query(text)
-            async for message in client.receive_response():
-                if isinstance(message, AssistantMessage):
-                    for block in message.content:
-                        if isinstance(block, TextBlock):
-                            print(block.text)
-                elif isinstance(message, ResultMessage):
-                    print(f"[cost: ${message.total_cost_usd:.4f}]")
-            print("---")
+                try:
+                    await client.query(text)
+                    async for message in client.receive_response():
+                        if isinstance(message, AssistantMessage):
+                            for block in message.content:
+                                if isinstance(block, TextBlock):
+                                    print(block.text)
+                        elif isinstance(message, ResultMessage):
+                            print(f"[cost: ${message.total_cost_usd:.4f}]")
+                    print("---")
+                except Exception as e:
+                    print(f"[error: {e}]")
+                    print("---")
+    except Exception:
+        pass
 
     print("Brain stopped.")
