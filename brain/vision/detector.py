@@ -18,9 +18,18 @@ def request_stop():
 def run(source=DEFAULT_SOURCE):
     _stop_event.clear()
     model = YOLO("yoloe-26s-seg-pf.pt")
-    cap = cv2.VideoCapture(source)
 
-    print(f"Vision started — reading from {source}")
+    print(f"Vision: waiting for camera ({source})...")
+    cap = None
+    while not _stop_event.is_set():
+        cap = cv2.VideoCapture(source)
+        if cap.isOpened():
+            ret, frame = cap.read()
+            if ret:
+                print("Vision started — camera connected")
+                break
+        cap.release()
+        time.sleep(1)
 
     while cap.isOpened() and not _stop_event.is_set():
         ret, frame = cap.read()
