@@ -52,12 +52,23 @@ serve_app = typer.Typer(no_args_is_help=True, help="Manage the web server (start
 app.add_typer(serve_app, name="serve")
 
 
+def _kill_all_legion_processes():
+    """Kill all stale legion/uvicorn processes."""
+    subprocess.run(["pkill", "-9", "-f", "uvicorn brain.api.main"], capture_output=True)
+    subprocess.run(["pkill", "-9", "-f", "legion serve"], capture_output=True)
+    # Clean up any stale PID files
+    for pid_file in Path(__file__).parent.parent.glob(".legion-*.pid"):
+        pid_file.unlink(missing_ok=True)
+    time.sleep(0.5)
+
+
 @serve_app.command("start")
 def serve_start(
     port: int = typer.Option(8000, help="Port to run the server on"),
     background: bool = typer.Option(False, "--bg", help="Run in background"),
 ):
-    """Start the Legion web server."""
+    """Start the Legion web server. Kills any stale processes first."""
+    _kill_all_legion_processes()
     if background:
         proc = subprocess.Popen(
             ["uv", "run", "uvicorn", "brain.api.main:app", "--host", "0.0.0.0", "--port", str(port)],
@@ -72,11 +83,9 @@ def serve_start(
 
 @serve_app.command("stop")
 def serve_stop():
-    """Stop the Legion web server."""
-    pid = int(PID_FILE.read_text())
-    PID_FILE.unlink()
-    os.kill(pid, signal.SIGTERM)
-    typer.echo(f"server stopped (pid {pid})")
+    """Stop ALL legion processes (server, vision, listeners)."""
+    _kill_all_legion_processes()
+    typer.echo("all legion processes stopped")
 
 
 @app.command()
