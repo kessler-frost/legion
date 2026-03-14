@@ -58,6 +58,7 @@ def run():
 async def run_with_queue(queue: asyncio.Queue):
     """Run listener, push transcriptions to queue."""
     print("Listening — capturing audio from iPhone mic")
+    print(f"Chunk duration: {CHUNK_DURATION}s")
     loop = asyncio.get_event_loop()
 
     while True:

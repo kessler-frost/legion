@@ -90,8 +90,6 @@ async def run(voice: bool = False, model: str = DEFAULT_MODEL):
                             for block in message.content:
                                 if isinstance(block, TextBlock):
                                     print(block.text)
-                        elif isinstance(message, ResultMessage):
-                            print(f"[cost: ${message.total_cost_usd:.4f}]")
                     print("---")
                 except Exception as e:
                     print(f"[error: {e}]")
