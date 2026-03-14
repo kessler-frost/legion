@@ -1,6 +1,7 @@
 import asyncio
 import json
 import math
+import os
 import signal
 import subprocess
 import time
@@ -74,7 +75,6 @@ def serve_stop():
     """Stop the Legion web server."""
     pid = int(PID_FILE.read_text())
     PID_FILE.unlink()
-    import os
     os.kill(pid, signal.SIGTERM)
     typer.echo(f"server stopped (pid {pid})")
 
@@ -120,3 +120,153 @@ def stop(
     topic = f"legion/bot/{bot_id}/command"
     publish(topic, {"action": "stop", "params": {}})
     typer.echo(f"bot {bot_id}: stopped")
+
+
+# ---------------------------------------------------------------------------
+# Vision start / stop
+# ---------------------------------------------------------------------------
+
+vision_app = typer.Typer(no_args_is_help=True)
+app.add_typer(vision_app, name="vision")
+
+VISION_PID_FILE = Path(__file__).parent.parent / ".legion-vision.pid"
+
+
+@vision_app.command("start")
+def vision_start(
+    background: bool = typer.Option(False, "--bg", help="Run in background"),
+    source: str = typer.Option("0", help="Camera device index or RTSP URL"),
+):
+    """Start the vision detection pipeline."""
+    parsed_source = int(source) if source.isdigit() else source
+    if background:
+        proc = subprocess.Popen(
+            ["uv", "run", "python", "-c", f"from brain.vision.detector import run; run({repr(parsed_source)})"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        VISION_PID_FILE.write_text(str(proc.pid))
+        typer.echo(f"vision started (pid {proc.pid})")
+    else:
+        from brain.vision.detector import run
+
+        run(parsed_source)
+
+
+@vision_app.command("stop")
+def vision_stop():
+    """Stop the vision detection pipeline."""
+    pid = int(VISION_PID_FILE.read_text())
+    VISION_PID_FILE.unlink()
+    os.kill(pid, signal.SIGTERM)
+    typer.echo(f"vision stopped (pid {pid})")
+
+
+# ---------------------------------------------------------------------------
+# Scene queries
+# ---------------------------------------------------------------------------
+
+scene_app = typer.Typer(no_args_is_help=True)
+app.add_typer(scene_app, name="scene")
+
+
+@scene_app.command("state")
+def scene_state():
+    """Print full scene state as JSON."""
+    from brain.vision.state import read_state
+
+    typer.echo(json.dumps(read_state(), indent=2))
+
+
+@scene_app.command("bots")
+def scene_bots():
+    """Print bot positions."""
+    from brain.vision.state import read_state
+
+    state = read_state()
+    typer.echo(json.dumps(state.get("bots", []), indent=2))
+
+
+@scene_app.command("objects")
+def scene_objects():
+    """Print detected objects."""
+    from brain.vision.state import read_state
+
+    state = read_state()
+    typer.echo(json.dumps(state.get("objects", []), indent=2))
+
+
+@scene_app.command("snapshot")
+def scene_snapshot():
+    """Save current frame and print file path."""
+    import cv2
+
+    from brain.vision.state import save_snapshot
+
+    cap = cv2.VideoCapture(0)
+    ret, frame = cap.read()
+    cap.release()
+    if ret:
+        path = save_snapshot(frame)
+        typer.echo(str(path))
+
+
+@scene_app.command("describe")
+def scene_describe():
+    """Human-readable scene summary."""
+    from brain.vision.state import read_state
+
+    state = read_state()
+    lines = []
+    lines.append(f"Scene at {state.get('timestamp', 'unknown')}:")
+    lines.append(f"  Frame: {state.get('frame_width', '?')}x{state.get('frame_height', '?')}")
+
+    bots = state.get("bots", [])
+    lines.append(f"  Bots: {len(bots)}")
+    for b in bots:
+        lines.append(f"    Bot {b.get('id', '?')}: pos={b['position']}, conf={b['confidence']}")
+
+    objects = state.get("objects", [])
+    lines.append(f"  Objects: {len(objects)}")
+    for o in objects:
+        lines.append(f"    {o['label']}: pos={o['position']}, conf={o['confidence']}")
+
+    typer.echo("\n".join(lines))
+
+
+# ---------------------------------------------------------------------------
+# Listen start / stop
+# ---------------------------------------------------------------------------
+
+listen_app = typer.Typer(no_args_is_help=True)
+app.add_typer(listen_app, name="listen")
+
+LISTEN_PID_FILE = Path(__file__).parent.parent / ".legion-listen.pid"
+
+
+@listen_app.command("start")
+def listen_start(
+    background: bool = typer.Option(False, "--bg", help="Run in background"),
+):
+    """Start the voice command listener."""
+    if background:
+        proc = subprocess.Popen(
+            ["uv", "run", "python", "-c", "from brain.voice.listener import run; run()"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        LISTEN_PID_FILE.write_text(str(proc.pid))
+        typer.echo(f"listener started (pid {proc.pid})")
+    else:
+        from brain.voice.listener import run
+
+        run()
+
+
+@listen_app.command("stop")
+def listen_stop():
+    """Stop the voice command listener."""
+    pid = int(LISTEN_PID_FILE.read_text())
+    LISTEN_PID_FILE.unlink()
+    os.kill(pid, signal.SIGTERM)
+    typer.echo(f"listener stopped (pid {pid})")
