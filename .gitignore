@@ -216,3 +216,5 @@ __marimo__/
 
 # YOLO model weights
 *.pt
+.DS_Store
+*.ts

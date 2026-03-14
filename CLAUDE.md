@@ -94,6 +94,9 @@ legion/
 │   │   └── state.py    # In-memory scene state + frame buffers
 │   ├── voice/          # Voice command pipeline
 │   │   └── listener.py # Audio capture + mlx-qwen3-asr transcription
+│   ├── reasoning/      # CC brain integration
+│   │   ├── tools.py    # MCP tools (scene, move, stop, kick)
+│   │   └── brain.py    # CC session + async input queue
 │   └── cli.py          # Typer CLI (legion command)
 ├── firmware/
 │   └── soccerbot/      # CyberBrick MicroPython bot code
