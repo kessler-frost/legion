@@ -1,13 +1,18 @@
 import asyncio
 import json
 import math
+import signal
+import subprocess
 import time
+from pathlib import Path
 
 import typer
 import uvicorn
 import aiomqtt
 
 app = typer.Typer(name="legion", no_args_is_help=True)
+
+PID_FILE = Path(__file__).parent.parent / ".legion-server.pid"
 
 BROKER_HOST = "localhost"
 BROKER_PORT = 1883
@@ -42,10 +47,36 @@ def angle_speed_to_motors(angle: float, speed: int) -> tuple[int, int]:
     return left, right
 
 
-@app.command()
-def serve(port: int = typer.Option(8000, help="Port to run the server on")):
+serve_app = typer.Typer(no_args_is_help=True)
+app.add_typer(serve_app, name="serve")
+
+
+@serve_app.command("start")
+def serve_start(
+    port: int = typer.Option(8000, help="Port to run the server on"),
+    background: bool = typer.Option(False, "--bg", help="Run in background"),
+):
     """Start the Legion web server."""
-    uvicorn.run("brain.api.main:app", host="0.0.0.0", port=port)
+    if background:
+        proc = subprocess.Popen(
+            ["uv", "run", "uvicorn", "brain.api.main:app", "--host", "0.0.0.0", "--port", str(port)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        PID_FILE.write_text(str(proc.pid))
+        typer.echo(f"server started (pid {proc.pid}, port {port})")
+    else:
+        uvicorn.run("brain.api.main:app", host="0.0.0.0", port=port)
+
+
+@serve_app.command("stop")
+def serve_stop():
+    """Stop the Legion web server."""
+    pid = int(PID_FILE.read_text())
+    PID_FILE.unlink()
+    import os
+    os.kill(pid, signal.SIGTERM)
+    typer.echo(f"server stopped (pid {pid})")
 
 
 @app.command()

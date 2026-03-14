@@ -88,8 +88,12 @@ legion/
 
 ```bash
 # Start web server (FastAPI + joystick UI)
-legion serve
-legion serve --port 8080
+legion serve start
+legion serve start --port 8080
+legion serve start --bg          # run in background
+
+# Stop web server
+legion serve stop
 
 # Move a bot — bot_id, angle (degrees), speed (0-2048), duration (seconds)
 legion move 1 0 1500 2.0        # bot 1, forward, speed 1500, 2s
