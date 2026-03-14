@@ -59,10 +59,10 @@ async def command_page():
 @app.post("/vision/start")
 async def vision_start():
     global _vision_task
-    if _vision_task and not _vision_task.done():
+    if _vision_task and _vision_task.is_alive():
         return {"status": "already running"}
-    from brain.vision.detector import run_vision
-    _vision_task = asyncio.create_task(run_vision())
+    from brain.vision.detector import start_vision
+    _vision_task = start_vision()
     return {"status": "started"}
 
 
@@ -77,7 +77,7 @@ async def vision_stop():
 
 @app.get("/vision/status")
 async def vision_status():
-    running = _vision_task is not None and not _vision_task.done()
+    running = _vision_task is not None and _vision_task.is_alive()
     return {"running": running}
 
 
