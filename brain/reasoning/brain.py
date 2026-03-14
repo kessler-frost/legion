@@ -54,6 +54,9 @@ async def run(voice: bool = False):
     async with ClaudeSDKClient(options=options) as client:
         while True:
             text = await input_queue.get()
+            if text in ("quit", "exit"):
+                print("Brain stopped.")
+                break
             print(f"> {text}")
 
             await client.query(text)
