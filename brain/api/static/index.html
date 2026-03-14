@@ -2,126 +2,384 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Legion Bot Control</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Legion</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;600;700&family=IBM+Plex+Mono:wght@300;400&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg: #050505;
+            --surface: #111113;
+            --surface-raised: #19191d;
+            --border: #2a2a30;
+            --text: #e8e6e3;
+            --text-dim: #6b6a6f;
+            --accent: #c4a35a;
+            --accent-glow: #c4a35a22;
+            --danger: #c25450;
+            --success: #5a9a6a;
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
-            font-family: -apple-system, system-ui, sans-serif;
-            background: #1a1a2e;
-            color: #eee;
+            font-family: 'Familjen Grotesk', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
-            gap: 2rem;
+            gap: 3rem;
+            overflow: hidden;
+            position: relative;
         }
-        h1 { font-size: 1.5rem; font-weight: 600; }
-        #status {
-            padding: 0.4rem 1rem;
-            border-radius: 999px;
-            font-size: 0.85rem;
-            font-weight: 500;
+
+        /* subtle dot grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: radial-gradient(circle, #ffffff06 1px, transparent 1px);
+            background-size: 24px 24px;
+            pointer-events: none;
         }
-        #status.ok { background: #16a34a33; color: #4ade80; }
-        #status.err { background: #dc262633; color: #f87171; }
-        .controls {
-            display: grid;
-            grid-template-areas:
-                ".  up   ."
-                "lt stop rt"
-                ".  dn   .";
+
+        /* header */
+        .header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             gap: 0.75rem;
         }
-        .controls button {
-            width: 5rem;
-            height: 5rem;
-            border: none;
-            border-radius: 1rem;
-            background: #16213e;
-            color: #eee;
-            font-size: 1.5rem;
+
+        .wordmark {
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+
+        .status {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 300;
+            letter-spacing: 0.08em;
+            padding: 0.35rem 1rem;
+            border-radius: 2px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-dim);
+            transition: all 0.4s ease;
+        }
+
+        .status.ok {
+            border-color: var(--success);
+            color: var(--success);
+            box-shadow: 0 0 12px #5a9a6a15;
+        }
+
+        /* joystick area */
+        .joystick-container {
+            position: relative;
+            width: 220px;
+            height: 220px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .joystick-base {
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            position: relative;
+            touch-action: none;
+            cursor: grab;
+            box-shadow: inset 0 2px 20px #00000040;
+        }
+
+        .joystick-base::after {
+            content: '';
+            position: absolute;
+            inset: 50%;
+            width: 2px;
+            height: 2px;
+            background: var(--border);
+            border-radius: 50%;
+            box-shadow:
+                0 -40px 0 var(--border),
+                0 40px 0 var(--border),
+                -40px 0 0 var(--border),
+                40px 0 0 var(--border);
+            transform: translate(-50%, -50%);
+        }
+
+        .joystick-knob {
+            position: absolute;
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: var(--surface-raised);
+            border: 1px solid var(--border);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: box-shadow 0.15s ease;
+            pointer-events: none;
+            box-shadow: 0 2px 8px #00000060;
+        }
+
+        .joystick-knob.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px var(--accent-glow), 0 2px 8px #00000060;
+        }
+
+        .joystick-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.6rem;
+            font-weight: 300;
+            color: var(--text-dim);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            position: absolute;
+            pointer-events: none;
+        }
+
+        .joystick-label.top    { top: -24px; left: 50%; transform: translateX(-50%); }
+        .joystick-label.bottom { bottom: -24px; left: 50%; transform: translateX(-50%); }
+        .joystick-label.left   { left: -36px; top: 50%; transform: translateY(-50%) rotate(-90deg); }
+        .joystick-label.right  { right: -36px; top: 50%; transform: translateY(-50%) rotate(90deg); }
+
+        /* telemetry readout */
+        .readout {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 300;
+            color: var(--text-dim);
+            letter-spacing: 0.05em;
+            display: flex;
+            gap: 2rem;
+        }
+
+        .readout span {
+            color: var(--accent);
+        }
+
+        /* action buttons */
+        .actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 400;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            padding: 0.8rem 2rem;
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            background: var(--surface);
+            color: var(--text-dim);
             cursor: pointer;
-            transition: background 0.1s;
+            transition: all 0.15s ease;
             user-select: none;
             -webkit-user-select: none;
             touch-action: none;
         }
-        .controls button:active, .controls button.active {
-            background: #0f3460;
+
+        .btn:active, .btn.active {
+            border-color: var(--accent);
+            color: var(--text);
+            box-shadow: 0 0 16px var(--accent-glow);
         }
-        #btn-up    { grid-area: up; }
-        #btn-down  { grid-area: dn; }
-        #btn-left  { grid-area: lt; }
-        #btn-right { grid-area: rt; }
-        #btn-stop  { grid-area: stop; font-size: 0.85rem; background: #7f1d1d; }
-        #btn-stop:active, #btn-stop.active { background: #991b1b; }
-        #btn-kick {
-            width: 100%;
-            padding: 1rem 2rem;
-            border: none;
-            border-radius: 1rem;
-            background: #1e3a5f;
-            color: #eee;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: background 0.1s;
-            user-select: none;
-            -webkit-user-select: none;
+
+        .btn.stop {
+            border-color: var(--danger);
+            color: var(--danger);
         }
-        #btn-kick:active { background: #2563eb; }
+
+        .btn.stop:active, .btn.stop.active {
+            background: var(--danger);
+            color: var(--bg);
+            box-shadow: 0 0 16px #c2545022;
+        }
     </style>
 </head>
 <body>
-    <h1>Legion Bot Control</h1>
-    <div id="status" class="err">disconnected</div>
-
-    <div class="controls">
-        <button id="btn-up" data-action="forward">&#9650;</button>
-        <button id="btn-left" data-action="left">&#9664;</button>
-        <button id="btn-stop" data-action="stop">STOP</button>
-        <button id="btn-right" data-action="right">&#9654;</button>
-        <button id="btn-down" data-action="backward">&#9660;</button>
+    <div class="header">
+        <div class="wordmark">Legion</div>
+        <div class="status" id="status">connecting</div>
     </div>
 
-    <button id="btn-kick">Kick</button>
+    <div class="joystick-container">
+        <span class="joystick-label top">fwd</span>
+        <span class="joystick-label bottom">rev</span>
+        <span class="joystick-label left">left</span>
+        <span class="joystick-label right">right</span>
+        <div class="joystick-base" id="joystick-base">
+            <div class="joystick-knob" id="joystick-knob"></div>
+        </div>
+    </div>
+
+    <div class="readout">
+        <div>dir <span id="r-dir">---</span></div>
+        <div>spd <span id="r-spd">0</span></div>
+    </div>
+
+    <div class="actions">
+        <button class="btn stop" id="btn-stop">stop</button>
+        <button class="btn" id="btn-kick">kick</button>
+    </div>
 
     <script>
         const BOT_ID = 1;
-        const SPEED = 1500;
+        const MAX_SPEED = 2048;
+        const DEADZONE = 0.15;
+        const SEND_INTERVAL = 80;
+
+        let lastAction = "stop";
+        let lastSpeed = 0;
+        let sendTimer = null;
 
         async function sendCommand(action, params = {}) {
-            const res = await fetch(`/bot/${BOT_ID}/command`, {
+            fetch(`/bot/${BOT_ID}/command`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ action, params }),
             });
-            return res.ok;
         }
 
-        // Direction buttons: send on press, stop on release
-        document.querySelectorAll("[data-action]").forEach((btn) => {
-            const action = btn.dataset.action;
-            const params = action === "stop" ? {} : { speed: SPEED };
+        // --- Joystick ---
+        const base = document.getElementById("joystick-base");
+        const knob = document.getElementById("joystick-knob");
+        const rDir = document.getElementById("r-dir");
+        const rSpd = document.getElementById("r-spd");
+        let dragging = false;
+        let baseRect = null;
 
-            function start(e) {
-                e.preventDefault();
-                btn.classList.add("active");
-                sendCommand(action, params);
-            }
-            function end(e) {
-                e.preventDefault();
-                btn.classList.remove("active");
-                if (action !== "stop") sendCommand("stop");
+        function getJoystickValues(clientX, clientY) {
+            const cx = baseRect.left + baseRect.width / 2;
+            const cy = baseRect.top + baseRect.height / 2;
+            const radius = baseRect.width / 2;
+
+            let dx = (clientX - cx) / radius;
+            let dy = (clientY - cy) / radius;
+
+            const dist = Math.min(Math.sqrt(dx * dx + dy * dy), 1);
+            const angle = Math.atan2(dy, dx);
+            dx = Math.cos(angle) * dist;
+            dy = Math.sin(angle) * dist;
+
+            return { dx, dy, dist };
+        }
+
+        function updateKnob(dx, dy) {
+            const radius = baseRect.width / 2;
+            const px = dx * radius;
+            const py = dy * radius;
+            knob.style.transform = `translate(calc(-50% + ${px}px), calc(-50% + ${py}px))`;
+        }
+
+        function joystickToCommand(dx, dy, dist) {
+            if (dist < DEADZONE) return { action: "stop", speed: 0 };
+
+            const speed = Math.round((dist - DEADZONE) / (1 - DEADZONE) * MAX_SPEED);
+            const absDx = Math.abs(dx);
+            const absDy = Math.abs(dy);
+
+            let action;
+            if (absDy > absDx) {
+                action = dy < 0 ? "forward" : "backward";
+            } else {
+                action = dx < 0 ? "left" : "right";
             }
 
-            btn.addEventListener("pointerdown", start);
-            btn.addEventListener("pointerup", end);
-            btn.addEventListener("pointerleave", end);
+            return { action, speed };
+        }
+
+        function handleJoystickMove(clientX, clientY) {
+            const { dx, dy, dist } = getJoystickValues(clientX, clientY);
+            updateKnob(dx, dy);
+
+            const { action, speed } = joystickToCommand(dx, dy, dist);
+
+            rDir.textContent = action === "stop" ? "---" : action.slice(0, 3);
+            rSpd.textContent = speed;
+
+            if (action !== lastAction || Math.abs(speed - lastSpeed) > 100) {
+                lastAction = action;
+                lastSpeed = speed;
+                sendCommand(action, action === "stop" ? {} : { speed });
+            }
+        }
+
+        function resetJoystick() {
+            knob.style.transform = "translate(-50%, -50%)";
+            knob.classList.remove("active");
+            rDir.textContent = "---";
+            rSpd.textContent = "0";
+
+            if (lastAction !== "stop") {
+                lastAction = "stop";
+                lastSpeed = 0;
+                sendCommand("stop");
+            }
+
+            if (sendTimer) {
+                clearInterval(sendTimer);
+                sendTimer = null;
+            }
+        }
+
+        base.addEventListener("pointerdown", (e) => {
+            e.preventDefault();
+            base.setPointerCapture(e.pointerId);
+            dragging = true;
+            baseRect = base.getBoundingClientRect();
+            knob.classList.add("active");
+            handleJoystickMove(e.clientX, e.clientY);
+
+            sendTimer = setInterval(() => {
+                if (lastAction !== "stop") {
+                    sendCommand(lastAction, { speed: lastSpeed });
+                }
+            }, SEND_INTERVAL);
         });
 
-        // Kick button: hold to kick, release to stop
+        base.addEventListener("pointermove", (e) => {
+            if (!dragging) return;
+            e.preventDefault();
+            handleJoystickMove(e.clientX, e.clientY);
+        });
+
+        base.addEventListener("pointerup", (e) => {
+            dragging = false;
+            resetJoystick();
+        });
+
+        base.addEventListener("pointercancel", (e) => {
+            dragging = false;
+            resetJoystick();
+        });
+
+        // --- Stop button ---
+        const stopBtn = document.getElementById("btn-stop");
+        stopBtn.addEventListener("pointerdown", (e) => {
+            e.preventDefault();
+            stopBtn.classList.add("active");
+            sendCommand("stop");
+            resetJoystick();
+        });
+        stopBtn.addEventListener("pointerup", () => stopBtn.classList.remove("active"));
+
+        // --- Kick button ---
         const kickBtn = document.getElementById("btn-kick");
         kickBtn.addEventListener("pointerdown", (e) => {
             e.preventDefault();
@@ -139,17 +397,17 @@
             sendCommand("kick_stop");
         });
 
-        // Status polling
+        // --- Status ---
         async function checkStatus() {
             const el = document.getElementById("status");
             const res = await fetch(`/bot/${BOT_ID}/status`).catch(() => null);
             if (res && res.ok) {
                 const data = await res.json();
-                el.textContent = data.connected ? "connected" : "waiting for bot";
-                el.className = data.connected ? "ok" : "err";
+                el.textContent = data.connected ? "connected" : "waiting";
+                el.className = "status" + (data.connected ? " ok" : "");
             } else {
-                el.textContent = "server offline";
-                el.className = "err";
+                el.textContent = "offline";
+                el.className = "status";
             }
         }
         checkStatus();
