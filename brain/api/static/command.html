@@ -215,8 +215,6 @@
     <div class="header">
         <div class="wordmark">Legion</div>
         <button class="hbtn" id="btn-capture" onclick="toggleCapture()">start capture</button>
-        <button class="hbtn" id="btn-raw" onclick="switchStream(false)">raw</button>
-        <button class="hbtn" id="btn-yolo" onclick="switchStream(true)">yolo</button>
     </div>
 
     <div class="main">
@@ -250,12 +248,10 @@
         // --- Video stream ---
         let streamWs = null;
         let capturing = false;
-        let showAnnotated = false;
 
         function connectStream() {
             if (streamWs) streamWs.close();
-            const param = showAnnotated ? "?annotated=true" : "";
-            streamWs = new WebSocket(`ws://${location.host}/ws/stream${param}`);
+            streamWs = new WebSocket(`ws://${location.host}/ws/stream`);
             streamWs.binaryType = "blob";
             streamWs.onmessage = (e) => {
                 const url = URL.createObjectURL(e.data);
@@ -282,13 +278,6 @@
                 captureBtn.classList.add("active");
                 setTimeout(() => connectStream(), 1000);
             }
-        }
-
-        function switchStream(annotated) {
-            showAnnotated = annotated;
-            document.getElementById("btn-raw").className = "hbtn" + (annotated ? "" : " active");
-            document.getElementById("btn-yolo").className = "hbtn" + (annotated ? " active" : "");
-            if (capturing) connectStream();
         }
 
         // Check if vision is already running

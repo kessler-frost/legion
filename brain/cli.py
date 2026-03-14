@@ -178,60 +178,19 @@ def vision_stop():
 
 
 # ---------------------------------------------------------------------------
-# Scene queries
+# Scene
 # ---------------------------------------------------------------------------
-
-scene_app = typer.Typer(no_args_is_help=True, help="Query the current scene from the vision pipeline.")
-app.add_typer(scene_app, name="scene")
 
 API_BASE = "http://localhost:8000"
 
 
-def _get_scene() -> dict:
+@app.command()
+def snapshot():
+    """Capture a camera frame and print the file path. Use the Read tool to view it."""
     import urllib.request
-    resp = urllib.request.urlopen(f"{API_BASE}/scene/state")
-    return json.loads(resp.read())
-
-
-@scene_app.command("state")
-def scene_state():
-    """Print full scene state as JSON."""
-    typer.echo(json.dumps(_get_scene(), indent=2))
-
-
-@scene_app.command("bots")
-def scene_bots():
-    """Print bot positions."""
-    state = _get_scene()
-    typer.echo(json.dumps(state.get("bots", []), indent=2))
-
-
-@scene_app.command("objects")
-def scene_objects():
-    """Print detected objects."""
-    state = _get_scene()
-    typer.echo(json.dumps(state.get("objects", []), indent=2))
-
-
-@scene_app.command("describe")
-def scene_describe():
-    """Human-readable scene summary."""
-    state = _get_scene()
-    lines = []
-    lines.append(f"Scene at {state.get('timestamp', 'unknown')}:")
-    lines.append(f"  Frame: {state.get('frame_width', '?')}x{state.get('frame_height', '?')}")
-
-    bots = state.get("bots", [])
-    lines.append(f"  Bots: {len(bots)}")
-    for b in bots:
-        lines.append(f"    Bot {b.get('id', '?')}: pos={b['position']}, conf={b['confidence']}")
-
-    objects = state.get("objects", [])
-    lines.append(f"  Objects: {len(objects)}")
-    for o in objects:
-        lines.append(f"    {o['label']}: pos={o['position']}, conf={o['confidence']}")
-
-    typer.echo("\n".join(lines))
+    resp = urllib.request.urlopen(f"{API_BASE}/scene/snapshot")
+    data = json.loads(resp.read())
+    typer.echo(data.get("path", "failed"))
 
 
 # ---------------------------------------------------------------------------

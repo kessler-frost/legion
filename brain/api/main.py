@@ -26,7 +26,6 @@ class BotCommand(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Start brain on server startup
     from brain.reasoning.brain import run_brain
     asyncio.create_task(run_brain())
     print("Brain started")
@@ -83,22 +82,23 @@ async def vision_status():
     return {"running": running}
 
 
-@app.get("/scene/state")
-async def scene_state():
-    from brain.vision.state import read_state
-    return read_state()
+@app.get("/scene/snapshot")
+async def scene_snapshot():
+    from brain.vision.state import save_snapshot
+    path = save_snapshot()
+    return {"path": str(path)}
 
 
 # --- Video stream ---
 
 @app.websocket("/ws/stream")
-async def ws_stream(websocket: WebSocket, annotated: bool = False):
-    from brain.vision.state import get_frame
+async def ws_stream(websocket: WebSocket):
+    from brain.vision.state import get_frame_bytes
 
     await websocket.accept()
     last_data = b""
     while True:
-        data = get_frame(annotated=annotated)
+        data = get_frame_bytes()
         if data and data != last_data:
             last_data = data
             await websocket.send_bytes(data)
