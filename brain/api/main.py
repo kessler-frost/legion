@@ -53,7 +53,16 @@ async def vision_start():
     if _vision_thread and _vision_thread.is_alive():
         return {"status": "already running"}
     from brain.vision.detector import run as run_detector
-    _vision_thread = threading.Thread(target=run_detector, daemon=True)
+    import traceback
+
+    def _run_with_logging():
+        try:
+            run_detector()
+        except Exception as e:
+            traceback.print_exc()
+            print(f"Vision thread crashed: {e}")
+
+    _vision_thread = threading.Thread(target=_run_with_logging, daemon=True)
     _vision_thread.start()
     return {"status": "started"}
 
