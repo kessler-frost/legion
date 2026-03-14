@@ -47,12 +47,9 @@ def on_message(topic, msg):
     action = cmd.get("action")
     params = cmd.get("params", {})
     actions = {
-        "forward":  lambda: (motors.set_speed(1,  params.get("speed", 1500)), motors.set_speed(2, -params.get("speed", 1500))),
-        "backward": lambda: (motors.set_speed(1, -params.get("speed", 1500)), motors.set_speed(2,  params.get("speed", 1500))),
-        "left":     lambda: (motors.set_speed(1, params.get("speed", 1500)), motors.stop(2)),
-        "right":    lambda: (motors.stop(1), motors.set_speed(2, -params.get("speed", 1500))),
-        "stop":     lambda: stop_all(),
-        "kick":     lambda: kick_start(),
+        "drive":     lambda: (motors.set_speed(1, params.get("right", 0)), motors.set_speed(2, -params.get("left", 0))),
+        "stop":      lambda: stop_all(),
+        "kick":      lambda: kick_start(),
         "kick_stop": lambda: kick_stop(),
     }
     handler = actions.get(action)

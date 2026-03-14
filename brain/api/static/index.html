@@ -244,8 +244,8 @@
         const DEADZONE = 0.15;
         const SEND_INTERVAL = 80;
 
-        let lastAction = "stop";
-        let lastSpeed = 0;
+        let lastLeft = 0;
+        let lastRight = 0;
         let sendTimer = null;
 
         async function sendCommand(action, params = {}) {
@@ -287,36 +287,39 @@
             knob.style.transform = `translate(calc(-50% + ${px}px), calc(-50% + ${py}px))`;
         }
 
-        function joystickToCommand(dx, dy, dist) {
-            if (dist < DEADZONE) return { action: "stop", speed: 0 };
+        function joystickToMotors(dx, dy, dist) {
+            if (dist < DEADZONE) return { left: 0, right: 0 };
 
-            const speed = Math.round((dist - DEADZONE) / (1 - DEADZONE) * MAX_SPEED);
-            const absDx = Math.abs(dx);
-            const absDy = Math.abs(dy);
+            const scale = (dist - DEADZONE) / (1 - DEADZONE);
+            const throttle = -dy * scale * MAX_SPEED;
+            const steering = dx * scale * MAX_SPEED;
 
-            let action;
-            if (absDy > absDx) {
-                action = dy < 0 ? "forward" : "backward";
-            } else {
-                action = dx < 0 ? "left" : "right";
-            }
+            let left = Math.round(throttle + steering);
+            let right = Math.round(throttle - steering);
 
-            return { action, speed };
+            left = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, left));
+            right = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, right));
+
+            return { left, right };
         }
 
         function handleJoystickMove(clientX, clientY) {
             const { dx, dy, dist } = getJoystickValues(clientX, clientY);
             updateKnob(dx, dy);
 
-            const { action, speed } = joystickToCommand(dx, dy, dist);
+            const { left, right } = joystickToMotors(dx, dy, dist);
 
-            rDir.textContent = action === "stop" ? "---" : action.slice(0, 3);
-            rSpd.textContent = speed;
+            rDir.textContent = left === 0 && right === 0 ? "---" : `${left}/${right}`;
+            rSpd.textContent = Math.round((Math.abs(left) + Math.abs(right)) / 2);
 
-            if (action !== lastAction || Math.abs(speed - lastSpeed) > 100) {
-                lastAction = action;
-                lastSpeed = speed;
-                sendCommand(action, action === "stop" ? {} : { speed });
+            if (Math.abs(left - lastLeft) > 50 || Math.abs(right - lastRight) > 50) {
+                lastLeft = left;
+                lastRight = right;
+                if (left === 0 && right === 0) {
+                    sendCommand("stop");
+                } else {
+                    sendCommand("drive", { left, right });
+                }
             }
         }
 
@@ -326,9 +329,9 @@
             rDir.textContent = "---";
             rSpd.textContent = "0";
 
-            if (lastAction !== "stop") {
-                lastAction = "stop";
-                lastSpeed = 0;
+            if (lastLeft !== 0 || lastRight !== 0) {
+                lastLeft = 0;
+                lastRight = 0;
                 sendCommand("stop");
             }
 
@@ -347,8 +350,8 @@
             handleJoystickMove(e.clientX, e.clientY);
 
             sendTimer = setInterval(() => {
-                if (lastAction !== "stop") {
-                    sendCommand(lastAction, { speed: lastSpeed });
+                if (lastLeft !== 0 || lastRight !== 0) {
+                    sendCommand("drive", { left: lastLeft, right: lastRight });
                 }
             }, SEND_INTERVAL);
         });

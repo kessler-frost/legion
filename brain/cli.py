@@ -1,5 +1,6 @@
 import asyncio
 import json
+import math
 import time
 
 import typer
@@ -10,6 +11,7 @@ app = typer.Typer(name="legion", no_args_is_help=True)
 
 BROKER_HOST = "localhost"
 BROKER_PORT = 1883
+MAX_SPEED = 2048
 
 
 def publish(topic: str, payload: dict):
@@ -21,15 +23,23 @@ async def _publish(topic: str, payload: dict):
         await client.publish(topic, json.dumps(payload))
 
 
-def angle_to_action(angle: float) -> str:
-    a = angle % 360
-    if a < 45 or a >= 315:
-        return "forward"
-    if 45 <= a < 135:
-        return "right"
-    if 135 <= a < 225:
-        return "backward"
-    return "left"
+def angle_speed_to_motors(angle: float, speed: int) -> tuple[int, int]:
+    """Convert angle (degrees) + speed to left/right motor speeds.
+
+    0°=forward, 90°=right, 180°=backward, 270°=left.
+    Uses differential drive: dx steers, dy throttles.
+    """
+    rad = math.radians(angle)
+    dx = math.sin(rad)
+    dy = -math.cos(rad)
+
+    left = int(-dy * speed + dx * speed)
+    right = int(-dy * speed - dx * speed)
+
+    left = max(-MAX_SPEED, min(MAX_SPEED, left))
+    right = max(-MAX_SPEED, min(MAX_SPEED, right))
+
+    return left, right
 
 
 @app.command()
@@ -46,11 +56,11 @@ def move(
     duration: float = typer.Argument(help="Duration in seconds"),
 ):
     """Move a bot in a direction for a duration."""
-    action = angle_to_action(angle)
+    left, right = angle_speed_to_motors(angle, speed)
     topic = f"legion/bot/{bot_id}/command"
 
-    typer.echo(f"bot {bot_id}: {action} @ {speed} for {duration}s")
-    publish(topic, {"action": action, "params": {"speed": speed}})
+    typer.echo(f"bot {bot_id}: L={left} R={right} for {duration}s")
+    publish(topic, {"action": "drive", "params": {"left": left, "right": right}})
     time.sleep(duration)
     publish(topic, {"action": "stop", "params": {}})
     typer.echo(f"bot {bot_id}: stopped")
