@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Legion</title>
+    <title>Legion — Control</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;600;700&family=IBM+Plex+Mono:wght@300;400&display=swap" rel="stylesheet">
     <style>
@@ -194,6 +195,10 @@
             touch-action: none;
         }
 
+        .btn:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
         .btn:active, .btn.active {
             border-color: var(--accent);
             color: var(--text);
@@ -205,6 +210,10 @@
             color: var(--danger);
         }
 
+        .btn.stop:hover {
+            background: #c2545033;
+            color: var(--text);
+        }
         .btn.stop:active, .btn.stop.active {
             background: var(--danger);
             color: var(--bg);

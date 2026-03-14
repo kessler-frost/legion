@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legion — Stream</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #050505;
+            color: #e8e6e3;
+            font-family: 'IBM Plex Mono', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        h1 {
+            font-size: 0.8rem;
+            font-weight: 300;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: #6b6a6f;
+        }
+        .toggle {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .toggle button {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.65rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding: 0.4rem 0.8rem;
+            border: 1px solid #2a2a30;
+            border-radius: 2px;
+            background: #111113;
+            color: #6b6a6f;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .toggle button:hover {
+            border-color: #c4a35a;
+            color: #e8e6e3;
+        }
+        .toggle button.active {
+            border-color: #c4a35a;
+            color: #c4a35a;
+        }
+        #stream {
+            max-width: 100%;
+            max-height: 85vh;
+            border: 1px solid #2a2a30;
+        }
+        .stats {
+            margin-top: 0.5rem;
+            font-size: 0.65rem;
+            color: #6b6a6f;
+            letter-spacing: 0.05em;
+        }
+        .stats span { color: #c4a35a; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Legion Stream</h1>
+        <div class="toggle">
+            <button id="btn-capture" onclick="toggleCapture()">start capture</button>
+        </div>
+        <div class="toggle">
+            <button id="btn-raw" class="active" onclick="switchStream(false)">raw</button>
+            <button id="btn-yolo" onclick="switchStream(true)">yolo</button>
+        </div>
+    </div>
+    <img id="stream" alt="stream">
+    <div class="stats">fps <span id="fps">0</span> | frames <span id="frames">0</span></div>
+
+    <script>
+        const img = document.getElementById("stream");
+        const fpsEl = document.getElementById("fps");
+        const framesEl = document.getElementById("frames");
+
+        let ws = null;
+        let frameCount = 0;
+        let lastFpsTime = performance.now();
+        let fpsFrames = 0;
+
+        function connect(annotated) {
+            if (ws) ws.close();
+            const param = annotated ? "?annotated=true" : "";
+            ws = new WebSocket(`ws://${location.host}/ws/stream${param}`);
+            ws.binaryType = "blob";
+
+            ws.onmessage = (e) => {
+                const url = URL.createObjectURL(e.data);
+                img.onload = () => URL.revokeObjectURL(url);
+                img.src = url;
+
+                frameCount++;
+                fpsFrames++;
+                framesEl.textContent = frameCount;
+
+                const now = performance.now();
+                if (now - lastFpsTime >= 1000) {
+                    fpsEl.textContent = fpsFrames;
+                    fpsFrames = 0;
+                    lastFpsTime = now;
+                }
+            };
+        }
+
+        function switchStream(annotated) {
+            document.getElementById("btn-raw").className = annotated ? "" : "active";
+            document.getElementById("btn-yolo").className = annotated ? "active" : "";
+            connect(annotated);
+        }
+
+        // --- Capture control ---
+        let capturing = false;
+        const captureBtn = document.getElementById("btn-capture");
+
+        async function toggleCapture() {
+            if (capturing) {
+                await fetch("/vision/stop", { method: "POST" });
+                capturing = false;
+                captureBtn.textContent = "start capture";
+                captureBtn.className = "";
+                if (ws) ws.close();
+                ws = null;
+            } else {
+                await fetch("/vision/start", { method: "POST" });
+                capturing = true;
+                captureBtn.textContent = "stop capture";
+                captureBtn.className = "active";
+                setTimeout(() => connect(document.getElementById("btn-yolo").classList.contains("active")), 1000);
+            }
+        }
+
+        // Check initial state
+        fetch("/vision/status").then(r => r.json()).then(data => {
+            if (data.running) {
+                capturing = true;
+                captureBtn.textContent = "stop capture";
+                captureBtn.className = "active";
+                connect(false);
+            }
+        });
+    </script>
+</body>
+</html>

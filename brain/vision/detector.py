@@ -1,33 +1,32 @@
+import threading
 import time
 
 import cv2
 from onnxruntime import YOLO
 
-from brain.vision.state import write_state, save_snapshot
+from brain.vision.state import set_state, set_frame
 
 DEFAULT_SOURCE = 0  # Continuity Camera device index (or RTSP URL)
-DETECTION_INTERVAL = 1.0
+
+_stop_event = threading.Event()
+
+
+def request_stop():
+    _stop_event.set()
 
 
 def run(source=DEFAULT_SOURCE):
+    _stop_event.clear()
     model = YOLO("yolo11n.pt")
     cap = cv2.VideoCapture(source)
 
     print(f"Vision started — reading from {source}")
-    print(f"Detection interval: {DETECTION_INTERVAL}s")
 
-    last_detection = 0
-
-    while cap.isOpened():
+    while cap.isOpened() and not _stop_event.is_set():
         ret, frame = cap.read()
         if not ret:
             time.sleep(0.1)
             continue
-
-        now = time.time()
-        if now - last_detection < DETECTION_INTERVAL:
-            continue
-        last_detection = now
 
         results = model(frame, verbose=False)[0]
 
@@ -55,10 +54,8 @@ def run(source=DEFAULT_SOURCE):
             "frame_width": frame.shape[1],
             "frame_height": frame.shape[0],
         }
-        write_state(state)
-
-        annotated = results.plot()
-        save_snapshot(annotated)
+        set_state(state)
+        set_frame(frame, results.plot())
 
     cap.release()
     print("Vision stopped")

@@ -1,20 +1,42 @@
 import json
+import threading
 import time
 from pathlib import Path
 
 import cv2
 
-STATE_FILE = Path(__file__).parent.parent.parent / ".legion-scene.json"
 SNAPSHOT_DIR = Path(__file__).parent.parent.parent / ".legion-snapshots"
 
+_lock = threading.Lock()
+_latest_raw_bytes = b""
+_latest_annotated_bytes = b""
+_latest_state = {}
 
-def write_state(state: dict):
+
+def set_state(state: dict):
+    global _latest_state
     state["timestamp"] = time.time()
-    STATE_FILE.write_text(json.dumps(state, indent=2))
+    with _lock:
+        _latest_state = state
 
 
 def read_state() -> dict:
-    return json.loads(STATE_FILE.read_text())
+    with _lock:
+        return _latest_state.copy()
+
+
+def set_frame(raw_frame, annotated_frame):
+    global _latest_raw_bytes, _latest_annotated_bytes
+    _, raw_jpg = cv2.imencode(".jpg", raw_frame)
+    _, ann_jpg = cv2.imencode(".jpg", annotated_frame)
+    with _lock:
+        _latest_raw_bytes = raw_jpg.tobytes()
+        _latest_annotated_bytes = ann_jpg.tobytes()
+
+
+def get_frame(annotated: bool = False) -> bytes:
+    with _lock:
+        return _latest_annotated_bytes if annotated else _latest_raw_bytes
 
 
 def save_snapshot(frame) -> Path:

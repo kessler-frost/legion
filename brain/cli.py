@@ -169,54 +169,39 @@ def vision_stop():
 scene_app = typer.Typer(no_args_is_help=True)
 app.add_typer(scene_app, name="scene")
 
+API_BASE = "http://localhost:8000"
+
+
+def _get_scene() -> dict:
+    import urllib.request
+    resp = urllib.request.urlopen(f"{API_BASE}/scene/state")
+    return json.loads(resp.read())
+
 
 @scene_app.command("state")
 def scene_state():
     """Print full scene state as JSON."""
-    from brain.vision.state import read_state
-
-    typer.echo(json.dumps(read_state(), indent=2))
+    typer.echo(json.dumps(_get_scene(), indent=2))
 
 
 @scene_app.command("bots")
 def scene_bots():
     """Print bot positions."""
-    from brain.vision.state import read_state
-
-    state = read_state()
+    state = _get_scene()
     typer.echo(json.dumps(state.get("bots", []), indent=2))
 
 
 @scene_app.command("objects")
 def scene_objects():
     """Print detected objects."""
-    from brain.vision.state import read_state
-
-    state = read_state()
+    state = _get_scene()
     typer.echo(json.dumps(state.get("objects", []), indent=2))
-
-
-@scene_app.command("snapshot")
-def scene_snapshot():
-    """Save current frame and print file path."""
-    import cv2
-
-    from brain.vision.state import save_snapshot
-
-    cap = cv2.VideoCapture(0)
-    ret, frame = cap.read()
-    cap.release()
-    if ret:
-        path = save_snapshot(frame)
-        typer.echo(str(path))
 
 
 @scene_app.command("describe")
 def scene_describe():
     """Human-readable scene summary."""
-    from brain.vision.state import read_state
-
-    state = read_state()
+    state = _get_scene()
     lines = []
     lines.append(f"Scene at {state.get('timestamp', 'unknown')}:")
     lines.append(f"  Frame: {state.get('frame_width', '?')}x{state.get('frame_height', '?')}")
