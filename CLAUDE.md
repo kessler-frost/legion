@@ -106,6 +106,13 @@ legion stop 1
 
 Angle mapping: 0°=forward, 90°=right, 180°=backward, 270°=left. All commands auto-stop after the specified duration.
 
+## Bot Calibration
+
+### Bot 1 (SoccerBot)
+- **Straight line drift:** Right motor runs ~16% faster. Use angle ~350° (10° left) to go straight. At speed 1000: L=811, R=1158.
+- **90° turn:** 0.42s at speed 1000 for both left and right.
+- Surface friction and battery level cause variance.
+
 ## CyberBrick Reference
 
 Primary reference for all CyberBrick firmware work:
