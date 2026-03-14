@@ -132,7 +132,13 @@ legion scene describe           # human-readable summary
 # Voice
 legion listen start [--bg]
 legion listen stop
+
+# Brain (CC reasoning engine)
+legion brain start              # interactive — type commands
+legion brain start --voice      # interactive + voice commands from iPhone mic
 ```
+
+`legion` is installed globally as an editable uv tool — use `legion` directly, never `uv run legion`.
 
 Angle mapping: 0°=forward, 90°=right, 180°=backward, 270°=left. Uses differential drive math — angle+speed converted to per-motor speeds. All commands auto-stop after duration.
 
