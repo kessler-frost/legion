@@ -5,15 +5,15 @@ from onnxruntime import YOLO
 
 from brain.vision.state import write_state, save_snapshot
 
-RTSP_URL = "rtsp://localhost:8554/live/iphone"
+DEFAULT_SOURCE = 0  # Continuity Camera device index (or RTSP URL)
 DETECTION_INTERVAL = 1.0
 
 
-def run(rtsp_url: str = RTSP_URL):
+def run(source=DEFAULT_SOURCE):
     model = YOLO("yolo11n.pt")
-    cap = cv2.VideoCapture(rtsp_url)
+    cap = cv2.VideoCapture(source)
 
-    print(f"Vision started — reading from {rtsp_url}")
+    print(f"Vision started — reading from {source}")
     print(f"Detection interval: {DETECTION_INTERVAL}s")
 
     last_detection = 0
