@@ -48,7 +48,7 @@ def run():
 
         if wav_path.exists() and wav_path.stat().st_size > 1000 and not is_silent(wav_path):
             result = transcribe(str(wav_path))
-            text = result.get("text", "").strip()
+            text = result.text.strip()
             if text:
                 print(f"HEARD: {text}")
 
@@ -68,7 +68,7 @@ async def run_with_queue(queue: asyncio.Queue):
 
         if wav_path.exists() and wav_path.stat().st_size > 1000 and not is_silent(wav_path):
             result = await loop.run_in_executor(None, transcribe, str(wav_path))
-            text = result.get("text", "").strip()
+            text = result.text.strip()
             if text:
                 print(f"[voice] {text}")
                 await queue.put(text)
