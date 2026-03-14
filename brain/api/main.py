@@ -13,7 +13,7 @@ STATIC_DIR = Path(__file__).parent / "static"
 BROKER_HOST = "localhost"
 BROKER_PORT = 1883
 
-Action = Literal["forward", "backward", "left", "right", "stop", "kick"]
+Action = Literal["forward", "backward", "left", "right", "stop", "kick", "kick_stop"]
 
 
 class BotCommand(BaseModel):

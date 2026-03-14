@@ -4,12 +4,12 @@ import time
 import network
 import uasyncio as asyncio
 from umqtt.simple import MQTTClient
+from machine import Pin, PWM
 from bbl.motors import MotorsController
-from bbl.servos import ServosController
 
 
 motors = None
-servos = None
+servo_pwm = None
 
 
 def load_config():
@@ -30,16 +30,15 @@ def wifi_connect(ssid, password):
 def stop_all():
     motors.stop(1)
     motors.stop(2)
-    servos.set_angle(1, 90)
+    servo_pwm.duty(76)
 
 
-def kick():
-    print("KICK: spin")
-    servos.set_angle(1, 0)
-    time.sleep(1)
-    print("KICK: stop")
-    servos.set_angle(1, 90)
-    print("KICK: done")
+def kick_start():
+    servo_pwm.duty(25)
+
+
+def kick_stop():
+    servo_pwm.duty(76)
 
 
 def on_message(topic, msg):
@@ -53,7 +52,8 @@ def on_message(topic, msg):
         "left":     lambda: (motors.set_speed(1, params.get("speed", 1500)), motors.stop(2)),
         "right":    lambda: (motors.stop(1), motors.set_speed(2, -params.get("speed", 1500))),
         "stop":     lambda: stop_all(),
-        "kick":     lambda: kick(),
+        "kick":     lambda: kick_start(),
+        "kick_stop": lambda: kick_stop(),
     }
     handler = actions.get(action)
     if handler:
@@ -67,17 +67,17 @@ async def mqtt_loop(client):
 
 
 def run():
-    global motors, servos
+    global motors, servo_pwm
     config = load_config()
     wifi_connect(config["wifi_ssid"], config["wifi_password"])
 
-    # Init motors first (easypwm.init()), then servos after so servo PWM isn't clobbered
     motors = MotorsController()
     print("Motors ready")
 
-    servos = ServosController()
-    servos.set_angle(1, 90)
-    print("Servos ready")
+    # Raw PWM for servo — ServosController conflicts with easypwm from MotorsController
+    servo_pwm = PWM(Pin(3), freq=50)
+    servo_pwm.duty(76)
+    print("Servo ready")
 
     client = MQTTClient(
         client_id=f"legion_bot_{config['bot_id']}",

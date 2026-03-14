@@ -121,9 +121,22 @@
             btn.addEventListener("pointerleave", end);
         });
 
-        // Kick button
-        document.getElementById("btn-kick").addEventListener("click", () => {
+        // Kick button: hold to kick, release to stop
+        const kickBtn = document.getElementById("btn-kick");
+        kickBtn.addEventListener("pointerdown", (e) => {
+            e.preventDefault();
+            kickBtn.classList.add("active");
             sendCommand("kick");
+        });
+        kickBtn.addEventListener("pointerup", (e) => {
+            e.preventDefault();
+            kickBtn.classList.remove("active");
+            sendCommand("kick_stop");
+        });
+        kickBtn.addEventListener("pointerleave", (e) => {
+            e.preventDefault();
+            kickBtn.classList.remove("active");
+            sendCommand("kick_stop");
         });
 
         // Status polling
