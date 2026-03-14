@@ -1,7 +1,7 @@
 # brain/reasoning/brain.py
 import asyncio
-import signal
-import sys
+import tempfile
+from pathlib import Path
 
 from claude_agent_sdk import (
     AssistantMessage,
@@ -9,6 +9,8 @@ from claude_agent_sdk import (
     ClaudeSDKClient,
     ResultMessage,
     TextBlock,
+    ToolUseBlock,
+    ToolResultBlock,
 )
 
 MODELS = {
@@ -17,7 +19,7 @@ MODELS = {
     "haiku": "claude-haiku-4-5-20251001",
 }
 
-DEFAULT_MODEL = "sonnet"
+DEFAULT_MODEL = "opus"
 
 SYSTEM_PROMPT = """\
 You are Legion — a swarm robotics controller. You control CyberBrick robots using the `legion` CLI. Run `legion --help` to discover available commands.
@@ -32,26 +34,56 @@ You are Legion — a swarm robotics controller. You control CyberBrick robots us
 Be concise. Focus on actions.\
 """
 
-
-async def read_stdin(queue: asyncio.Queue):
-    loop = asyncio.get_event_loop()
-    while True:
-        line = await loop.run_in_executor(None, sys.stdin.readline)
-        if not line:
-            break
-        text = line.strip()
-        if text:
-            await queue.put(text)
+# Shared state
+_input_queue: asyncio.Queue = None
+_subscribers: list[asyncio.Queue] = []
+_client: ClaudeSDKClient = None
+_ready = asyncio.Event()
 
 
-async def run(voice: bool = False, model: str = DEFAULT_MODEL):
+def _broadcast(msg: dict):
+    for q in _subscribers:
+        q.put_nowait(msg)
+
+
+def subscribe() -> asyncio.Queue:
+    q = asyncio.Queue()
+    _subscribers.append(q)
+    return q
+
+
+def unsubscribe(q: asyncio.Queue):
+    _subscribers.remove(q)
+
+
+async def send_command(text: str):
+    await _input_queue.put(text)
+
+
+async def send_audio(audio_bytes: bytes):
+    """Transcribe audio and send to brain."""
+    from mlx_qwen3_asr import transcribe
+
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+        wav_path = Path(tmp.name)
+        tmp.write(audio_bytes)
+
+    result = await asyncio.to_thread(transcribe, str(wav_path))
+    wav_path.unlink(missing_ok=True)
+
+    text = result.text.strip()
+    if text:
+        _broadcast({"type": "transcription", "text": text})
+        await _input_queue.put(text)
+        return text
+    return None
+
+
+async def run_brain(model: str = DEFAULT_MODEL):
+    """Run the brain loop. Call as an asyncio task."""
+    global _input_queue, _client
+    _input_queue = asyncio.Queue()
     model_id = MODELS.get(model, model)
-    input_queue = asyncio.Queue()
-    shutdown = asyncio.Event()
-
-    loop = asyncio.get_event_loop()
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(sig, shutdown.set)
 
     options = ClaudeAgentOptions(
         system_prompt=SYSTEM_PROMPT,
@@ -60,41 +92,25 @@ async def run(voice: bool = False, model: str = DEFAULT_MODEL):
         model=model_id,
     )
 
-    asyncio.create_task(read_stdin(input_queue))
+    _broadcast({"type": "status", "text": f"Brain ready (model: {model_id})"})
+    _ready.set()
 
-    if voice:
-        from brain.voice.listener import run_with_queue
-        asyncio.create_task(run_with_queue(input_queue))
+    async with ClaudeSDKClient(options=options) as client:
+        _client = client
+        while True:
+            text = await _input_queue.get()
+            _broadcast({"type": "user", "text": text})
 
-    print(f"Legion Brain ready (model: {model_id}). Type commands or speak.")
-    print("Type 'quit' or 'exit' to stop. Ctrl+C also works.")
-    print("---")
-
-    try:
-        async with ClaudeSDKClient(options=options) as client:
-            while not shutdown.is_set():
-                try:
-                    text = await asyncio.wait_for(input_queue.get(), timeout=0.5)
-                except asyncio.TimeoutError:
-                    continue
-
-                if text in ("quit", "exit"):
-                    break
-
-                print(f"> {text}")
-
-                try:
-                    await client.query(text)
-                    async for message in client.receive_response():
-                        if isinstance(message, AssistantMessage):
-                            for block in message.content:
-                                if isinstance(block, TextBlock):
-                                    print(block.text)
-                    print("---")
-                except Exception as e:
-                    print(f"[error: {e}]")
-                    print("---")
-    except Exception:
-        pass
-
-    print("Brain stopped.")
+            try:
+                await client.query(text)
+                async for message in client.receive_response():
+                    if isinstance(message, AssistantMessage):
+                        for block in message.content:
+                            if isinstance(block, TextBlock):
+                                _broadcast({"type": "assistant", "text": block.text})
+                            elif isinstance(block, ToolUseBlock):
+                                _broadcast({"type": "tool_use", "tool": block.name, "input": str(block.input)})
+                            elif isinstance(block, ToolResultBlock):
+                                _broadcast({"type": "tool_result", "text": str(block.content)})
+            except Exception as e:
+                _broadcast({"type": "error", "text": str(e)})

@@ -69,15 +69,21 @@ def serve_start(
 ):
     """Start the Legion web server. Kills any stale processes first."""
     _kill_all_legion_processes()
+    # Unset CLAUDECODE so the brain's claude-agent-sdk doesn't think it's nested
+    env = {**os.environ}
+    env.pop("CLAUDECODE", None)
+
     if background:
         proc = subprocess.Popen(
             ["uv", "run", "uvicorn", "brain.api.main:app", "--host", "0.0.0.0", "--port", str(port)],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            env=env,
         )
         PID_FILE.write_text(str(proc.pid))
         typer.echo(f"server started (pid {proc.pid}, port {port})")
     else:
+        os.environ.pop("CLAUDECODE", None)
         uvicorn.run("brain.api.main:app", host="0.0.0.0", port=port)
 
 
@@ -264,21 +270,3 @@ def listen_stop():
     LISTEN_PID_FILE.unlink()
     os.kill(pid, signal.SIGTERM)
     typer.echo(f"listener stopped (pid {pid})")
-
-
-# ---------------------------------------------------------------------------
-# Brain (CC reasoning)
-# ---------------------------------------------------------------------------
-
-brain_app = typer.Typer(no_args_is_help=True, help="Manage the CC reasoning engine (start/stop).")
-app.add_typer(brain_app, name="brain")
-
-
-@brain_app.command("start")
-def brain_start(
-    voice: bool = typer.Option(False, "--voice", help="Enable voice commands from iPhone mic"),
-    model: str = typer.Option("sonnet", help="Model: opus, sonnet, or haiku"),
-):
-    """Start the CC brain session (interactive)."""
-    from brain.reasoning.brain import run
-    asyncio.run(run(voice=voice, model=model))
