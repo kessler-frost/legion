@@ -271,12 +271,10 @@ def start_vision(source=DEFAULT_SOURCE):
     _stop_event.clear()
 
     print("Vision: loading models...")
-    yolo_model = YOLO("yolo26x-seg.pt")
+    yolo_model = YOLO("yoloe-26s-seg-pf.pt")
 
+    # Depth disabled for now — CoreML may be causing stalls
     depth_model = None
-    if DEPTH_MODEL_PATH.exists():
-        depth_model = ct.models.MLModel(str(DEPTH_MODEL_PATH))
-        print("Vision: depth model loaded")
 
     thread = threading.Thread(
         target=_vision_thread,
