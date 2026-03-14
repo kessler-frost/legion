@@ -11,7 +11,13 @@ from claude_agent_sdk import (
     TextBlock,
 )
 
-MODEL = "claude-sonnet-4-6"
+MODELS = {
+    "opus": "claude-opus-4-6",
+    "sonnet": "claude-sonnet-4-6",
+    "haiku": "claude-haiku-4-5-20251001",
+}
+
+DEFAULT_MODEL = "sonnet"
 
 SYSTEM_PROMPT = """\
 You are Legion — a swarm robotics controller. You control CyberBrick robots using the `legion` CLI. Run `legion --help` to discover available commands.
@@ -38,7 +44,8 @@ async def read_stdin(queue: asyncio.Queue):
             await queue.put(text)
 
 
-async def run(voice: bool = False, model: str = MODEL):
+async def run(voice: bool = False, model: str = DEFAULT_MODEL):
+    model_id = MODELS.get(model, model)
     input_queue = asyncio.Queue()
     shutdown = asyncio.Event()
 
@@ -50,7 +57,7 @@ async def run(voice: bool = False, model: str = MODEL):
         system_prompt=SYSTEM_PROMPT,
         allowed_tools=["Bash"],
         cwd="/Users/fimbulwinter/dev/legion",
-        model=model,
+        model=model_id,
     )
 
     asyncio.create_task(read_stdin(input_queue))
@@ -59,7 +66,7 @@ async def run(voice: bool = False, model: str = MODEL):
         from brain.voice.listener import run_with_queue
         asyncio.create_task(run_with_queue(input_queue))
 
-    print(f"Legion Brain ready (model: {model}). Type commands or speak.")
+    print(f"Legion Brain ready (model: {model_id}). Type commands or speak.")
     print("Type 'quit' or 'exit' to stop. Ctrl+C also works.")
     print("---")
 

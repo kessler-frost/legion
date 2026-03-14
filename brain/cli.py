@@ -277,7 +277,7 @@ app.add_typer(brain_app, name="brain")
 @brain_app.command("start")
 def brain_start(
     voice: bool = typer.Option(False, "--voice", help="Enable voice commands from iPhone mic"),
-    model: str = typer.Option("claude-sonnet-4-6", help="Model to use for reasoning"),
+    model: str = typer.Option("sonnet", help="Model: opus, sonnet, or haiku"),
 ):
     """Start the CC brain session (interactive)."""
     from brain.reasoning.brain import run
