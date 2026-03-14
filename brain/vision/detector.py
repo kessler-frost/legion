@@ -208,15 +208,26 @@ async def run_vision(source=DEFAULT_SOURCE):
 
     print("Vision started")
 
+    pipeline_task = None
+
     while not _stop:
         ret, frame = await asyncio.to_thread(cap.read)
         if not ret:
             await asyncio.sleep(0.1)
             continue
 
-        raw, annotated, state = await asyncio.to_thread(_pipeline, yolo_model, depth_model, frame)
-        set_state(state)
-        set_frame(raw, annotated)
+        # Always update raw frame for smooth streaming
+        from brain.vision.state import set_raw_frame
+        set_raw_frame(frame)
+
+        # Only start pipeline if previous one is done
+        if pipeline_task is None or pipeline_task.done():
+            async def process(f):
+                _, annotated, state = await asyncio.to_thread(_pipeline, yolo_model, depth_model, f)
+                set_state(state)
+                set_frame(f, annotated)
+
+            pipeline_task = asyncio.create_task(process(frame))
 
     cap.release()
     print("Vision stopped")

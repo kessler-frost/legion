@@ -25,13 +25,21 @@ def read_state() -> dict:
         return _latest_state.copy()
 
 
+def set_raw_frame(frame):
+    global _latest_raw_bytes
+    _, raw_jpg = cv2.imencode(".jpg", frame)
+    with _lock:
+        _latest_raw_bytes = raw_jpg.tobytes()
+
+
 def set_frame(raw_frame, annotated_frame):
     global _latest_raw_bytes, _latest_annotated_bytes
     _, raw_jpg = cv2.imencode(".jpg", raw_frame)
-    _, ann_jpg = cv2.imencode(".jpg", annotated_frame)
     with _lock:
         _latest_raw_bytes = raw_jpg.tobytes()
-        _latest_annotated_bytes = ann_jpg.tobytes()
+        if annotated_frame is not None:
+            _, ann_jpg = cv2.imencode(".jpg", annotated_frame)
+            _latest_annotated_bytes = ann_jpg.tobytes()
 
 
 def get_frame(annotated: bool = False) -> bytes:
