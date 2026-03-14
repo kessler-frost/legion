@@ -28,7 +28,7 @@ def run(source=DEFAULT_SOURCE):
             time.sleep(0.1)
             continue
 
-        results = model(frame, verbose=False)[0]
+        results = model(frame, verbose=False, conf=0.5)[0]
 
         bots = []
         objects = []
