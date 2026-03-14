@@ -221,7 +221,7 @@ async def run_vision(source=DEFAULT_SOURCE):
     global _stop
     _stop = False
 
-    yolo_model = await asyncio.to_thread(YOLO, "yolo26n-seg.pt")
+    yolo_model = await asyncio.to_thread(YOLO, "yolo26x-seg.pt")
     cap = await asyncio.to_thread(cv2.VideoCapture, source)
 
     if not cap.isOpened():
