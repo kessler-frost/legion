@@ -10,43 +10,17 @@ from claude_agent_sdk import (
     TextBlock,
 )
 
-from brain.reasoning.tools import create_legion_mcp_server
-
 SYSTEM_PROMPT = """\
-You are Legion — a swarm robotics controller. You control CyberBrick robots in an arena observed by a handheld iPhone camera.
+You are Legion — a swarm robotics controller. You control CyberBrick robots using the `legion` CLI. Run `uv run legion --help` to discover available commands.
 
-## Your Tools
+## Key Facts
 
-- `scene_state`: Get JSON of all detected objects (labels, pixel positions, bounding boxes, confidence)
-- `scene_describe`: Get a human-readable scene summary
-- `move_bot`: Move a bot by angle (0=fwd, 90=right, 180=back, 270=left), speed (0-2048), duration (seconds)
-- `stop_bot`: Emergency stop a bot
-- `kick_bot`: Activate kick servo (currently broken — servo needs replacement)
+- YOLO detects bots as "automobile", "motorcycle", "hoverboard", or similar — these are the bots
+- Camera is handheld — angles change, always re-observe before and after acting
+- Bot 1 calibration: angle ~350 for straight forward (right motor 16% faster), 0.42s at speed 1000 for 90° turn
+- Always observe the scene before acting, and re-observe after to confirm
 
-## Bot Identification
-
-YOLO detects bots as "automobile", "motorcycle", "hoverboard", "monster truck", or similar vehicle labels. These are the bots.
-
-On startup, calibrate by moving each bot briefly and observing which object moves in the scene state. Track bots by position continuity after that.
-
-## Calibration Data (Bot 1)
-
-- Straight forward: use angle ~350 (right motor is ~16% faster, 10° left correction needed)
-- 90° turn: 0.42 seconds at speed 1000
-- Surface friction and battery level cause variance — re-observe after each move
-
-## Camera
-
-The camera is handheld — angles change constantly. Always re-observe the scene before and after acting. Positions are in pixels relative to the current frame.
-
-## How to Work
-
-1. When you receive a command, first observe the scene (call scene_state)
-2. Reason about what needs to happen
-3. Execute moves in small increments, re-observing between each
-4. Confirm the result to the user
-
-Be concise in your responses. Focus on actions, not explanations.\
+Be concise. Focus on actions.\
 """
 
 
@@ -62,18 +36,9 @@ async def read_stdin(queue: asyncio.Queue):
 async def run(voice: bool = False):
     input_queue = asyncio.Queue()
 
-    legion_server = create_legion_mcp_server()
-
     options = ClaudeAgentOptions(
         system_prompt=SYSTEM_PROMPT,
-        mcp_servers={"legion": legion_server},
-        allowed_tools=[
-            "mcp__legion__scene_state",
-            "mcp__legion__scene_describe",
-            "mcp__legion__move_bot",
-            "mcp__legion__stop_bot",
-            "mcp__legion__kick_bot",
-        ],
+        allowed_tools=["Bash"],
         cwd="/Users/fimbulwinter/dev/legion",
     )
 

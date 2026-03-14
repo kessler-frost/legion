@@ -48,7 +48,7 @@ def angle_speed_to_motors(angle: float, speed: int) -> tuple[int, int]:
     return left, right
 
 
-serve_app = typer.Typer(no_args_is_help=True)
+serve_app = typer.Typer(no_args_is_help=True, help="Manage the web server (start/stop).")
 app.add_typer(serve_app, name="serve")
 
 
@@ -126,7 +126,7 @@ def stop(
 # Vision start / stop
 # ---------------------------------------------------------------------------
 
-vision_app = typer.Typer(no_args_is_help=True)
+vision_app = typer.Typer(no_args_is_help=True, help="Manage the YOLO vision pipeline (start/stop).")
 app.add_typer(vision_app, name="vision")
 
 VISION_PID_FILE = Path(__file__).parent.parent / ".legion-vision.pid"
@@ -166,7 +166,7 @@ def vision_stop():
 # Scene queries
 # ---------------------------------------------------------------------------
 
-scene_app = typer.Typer(no_args_is_help=True)
+scene_app = typer.Typer(no_args_is_help=True, help="Query the current scene from the vision pipeline.")
 app.add_typer(scene_app, name="scene")
 
 API_BASE = "http://localhost:8000"
@@ -223,7 +223,7 @@ def scene_describe():
 # Listen start / stop
 # ---------------------------------------------------------------------------
 
-listen_app = typer.Typer(no_args_is_help=True)
+listen_app = typer.Typer(no_args_is_help=True, help="Manage the voice command listener (start/stop).")
 app.add_typer(listen_app, name="listen")
 
 LISTEN_PID_FILE = Path(__file__).parent.parent / ".legion-listen.pid"
@@ -261,7 +261,7 @@ def listen_stop():
 # Brain (CC reasoning)
 # ---------------------------------------------------------------------------
 
-brain_app = typer.Typer(no_args_is_help=True)
+brain_app = typer.Typer(no_args_is_help=True, help="Manage the CC reasoning engine (start/stop).")
 app.add_typer(brain_app, name="brain")
 
 
