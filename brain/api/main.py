@@ -105,6 +105,12 @@ async def ws_stream(websocket: WebSocket, annotated: bool = False):
 
 # --- Brain ---
 
+@app.get("/brain/history")
+async def brain_history():
+    from brain.reasoning.brain import get_history
+    return get_history()
+
+
 @app.post("/brain/send")
 async def brain_send(body: dict):
     from brain.reasoning.brain import send_command

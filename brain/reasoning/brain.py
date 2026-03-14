@@ -74,9 +74,18 @@ _input_queue: asyncio.Queue = None
 _subscribers: list[asyncio.Queue] = []
 _client: ClaudeSDKClient = None
 _ready = asyncio.Event()
+_message_history: list[dict] = []
+MAX_HISTORY = 200
+
+
+def get_history() -> list[dict]:
+    return _message_history.copy()
 
 
 def _broadcast(msg: dict):
+    _message_history.append(msg)
+    if len(_message_history) > MAX_HISTORY:
+        del _message_history[:len(_message_history) - MAX_HISTORY]
     for q in _subscribers:
         q.put_nowait(msg)
 

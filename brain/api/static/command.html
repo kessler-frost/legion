@@ -334,6 +334,11 @@
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }
 
+        // Load message history on page load
+        fetch("/brain/history").then(r => r.json()).then(msgs => {
+            msgs.forEach(msg => addMessage(msg));
+        });
+
         connectBrain();
 
         // --- Text input ---
