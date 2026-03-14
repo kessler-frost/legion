@@ -208,3 +208,10 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Legion runtime files
+.legion-scene.json
+.legion-snapshots/
+
+# YOLO model weights
+*.pt
