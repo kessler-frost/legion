@@ -1,4 +1,4 @@
-import time
+import asyncio
 import tempfile
 import subprocess
 import numpy as np
@@ -51,5 +51,26 @@ def run():
             text = result.get("text", "").strip()
             if text:
                 print(f"HEARD: {text}")
+
+        wav_path.unlink(missing_ok=True)
+
+
+async def run_with_queue(queue: asyncio.Queue):
+    """Run listener, push transcriptions to queue."""
+    print("Listening — capturing audio from iPhone mic")
+    loop = asyncio.get_event_loop()
+
+    while True:
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+            wav_path = Path(tmp.name)
+
+        await loop.run_in_executor(None, extract_audio_chunk, CHUNK_DURATION, wav_path)
+
+        if wav_path.exists() and wav_path.stat().st_size > 1000 and not is_silent(wav_path):
+            result = await loop.run_in_executor(None, transcribe, str(wav_path))
+            text = result.get("text", "").strip()
+            if text:
+                print(f"[voice] {text}")
+                await queue.put(text)
 
         wav_path.unlink(missing_ok=True)
