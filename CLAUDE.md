@@ -1,135 +1,165 @@
 # Legion
 
-AI-controlled swarm robotics system. Overhead iPhone camera watches an arena of CyberBrick robots; a Mac Mini runs the brain.
+AI-controlled swarm robotics system. Handheld iPhone camera watches CyberBrick robots; a Mac Mini runs the brain.
 
 ## Architecture
 
-Two-layer design: passive Detection Pipeline + active Claude Code reasoning loop.
+CC uses the `legion` CLI for everything — observe, think, act.
 
 ```
-iPhone (RTSP) → Detection Pipeline → MCP Server ← Claude Code → MQTT → Bots
-                (ArUco + YOLO26)      (bridge)     (reasoning)        (CyberBricks)
+iPhone (Continuity Camera) → Vision Pipeline (YOLO) → Scene State (in-memory)
+                                                            ↑
+                                              CC (claude-agent-sdk) → legion CLI → MQTT → Bots
+                                                            ↑
+iPhone (Continuity Camera) → Voice Pipeline (mlx-qwen3-asr) → Transcribed Commands
 ```
 
 ### Hardware
 
-- **Bots**: Up to 4 CyberBrick robots (ESP32-C3, MicroPython, Bambu Lab). ArUco marker on top. Chassis 3D printed on Bambu P1S
+- **Bots**: CyberBrick robots (ESP32-C3, MicroPython, Bambu Lab). Chassis 3D printed on Bambu P1S
 - **Brain**: Mac Mini M4 Pro, 48GB RAM
-- **Camera**: iPhone mounted overhead, streaming via RTSP app
+- **Camera**: iPhone held by hand, streaming via Continuity Camera (WiFi/BLE, screen locked)
 
-### Detection Pipeline (passive, continuous)
+### Vision Pipeline
 
-Single Python process. Maintains scene state in memory.
+Runs as a background thread inside the FastAPI server. YOLO detection on every frame.
 
-- **ArUco tracking** (~30fps): `cv2.aruco.ArucoDetector` with `DICT_4X4_50`. Bot position, heading, marker ID
-  - Use OpenCV 4.7+ API (`getPredefinedDictionary`, `ArucoDetector`), not deprecated `Dictionary_get`
-- **YOLO26** (~30fps): Ultralytics, CoreML export for Neural Engine acceleration. Detects obstacles, objects, arena features
-  - YOLOE-26 for open-vocabulary detection (detect anything by text prompt)
-- **Scene state**: Combined ArUco + YOLO data as structured Python object, updated every frame
+- **Input**: iPhone via Continuity Camera (AVFoundation device index 0)
+- **Detection**: Ultralytics YOLO11n on every frame
+- **Output**: Scene state in memory (bots, objects, positions, bounding boxes)
+- **Stream**: WebSocket at `/ws/stream` serves JPEG frames to browser
 
-### MCP Server (bridge)
+### Voice Pipeline
 
-In-process with detection pipeline. Shares scene state via direct memory access.
+Extracts audio from iPhone mic (Continuity Camera), transcribes with mlx-qwen3-asr.
 
-| Tool | Description |
-|------|-------------|
-| `get_scene_state` | Bot positions/headings, detected objects, arena bounds (JSON) |
-| `get_snapshot` | Latest camera frame as image |
-| `send_command` | Publish JSON to `legion/bot/{id}/command` via MQTT |
-| `get_telemetry` | Latest telemetry from `legion/bot/{id}/telemetry` |
-| `get_arena_config` | Arena dimensions, marker-to-bot ID mapping |
+- **Input**: iPhone mic via ffmpeg AVFoundation capture
+- **STT**: mlx-qwen3-asr 0.6B (4-bit), ~40ms to transcribe 2s of audio
+- **Output**: Transcribed text commands fed to CC
 
-### Reasoning (Claude Code, active, drives the loop)
+### Reasoning (Claude Code)
 
-Single long-running `claude-agent-sdk` session. CC drives an observe-think-act loop:
+Single long-running `claude-agent-sdk` session. CC drives an observe-think-act loop using the `legion` CLI:
 
-1. **Observe**: `get_scene_state` + optionally `get_snapshot`
+1. **Observe**: `legion scene state` / `legion scene describe`
 2. **Think**: Reason about what bots should do
-3. **Act**: `send_command` per bot
+3. **Act**: `legion move` / `legion stop` / `legion kick`
 4. **Wait**: CC decides interval before next observation
 5. **Repeat**
 
-CC controls all timing — no external triggering, no cooldown logic, no feedback loops.
+**Latency budget CC must account for:**
+- Scene state: updated every frame (~33ms)
+- Voice transcription: ~40-100ms
+- MQTT command delivery: ~50ms
+- Total observe-to-act: ~200ms
 
 ### Communication
 
-- **Broker**: Mosquitto running locally on Mac Mini
-- **Command topic**: `legion/bot/{id}/command` — JSON `{"action": str, "params": dict}`
-- **Telemetry topic**: `legion/bot/{id}/telemetry`
-- **Bot-side MQTT**: `umqtt.simple` or `umqtt.robust` (MicroPython)
+- **Broker**: Mosquitto running locally on Mac Mini (`localhost:1883`)
+- **Command topic**: `legion/bot/{id}/command`
+- **Bot firmware action**: `drive` with `{"left": int, "right": int}` per-motor speeds
+- **Bot-side MQTT**: `umqtt.simple` (MicroPython)
 
-### Video Pipeline
+### Bot Firmware
 
-iPhone RTSP stream → `cv2.VideoCapture(rtsp_url)` → ArUco + YOLO26 (same frames)
+Custom MicroPython on CyberBrick ESP32-C3. Connects WiFi STA → MQTT broker → receives commands.
+
+- **Actions**: `drive` (per-motor speeds), `stop`, `kick`, `kick_stop`
+- **Motor mapping**: Motor 1 = right wheels (positive = forward), Motor 2 = left wheels (inverted)
+- **Servo**: Raw PWM on GPIO 3 (ServosController conflicts with easypwm from MotorsController)
+- **Upload**: `mpremote` over USB-C, or Arduino Lab for MicroPython
 
 ## Tech Stack
 
 - Python 3.12+, managed with `uv` (not pip/venv)
-- OpenCV (`opencv-contrib-python` for ArUco)
-- Ultralytics YOLO26 (CoreML export)
+- FastAPI + uvicorn (web server + API)
+- Ultralytics YOLO11n (object detection)
+- mlx-qwen3-asr (speech-to-text, Apple Silicon optimized)
+- OpenCV (`opencv-contrib-python` for camera capture)
 - claude-agent-sdk (reasoning)
 - MicroPython (bot firmware)
 - MQTT (Mosquitto broker, umqtt bot-side)
+- Typer (CLI)
 
 ## Project Structure
 
 ```
 legion/
-├── brain/              # Mac Mini orchestrator
-│   ├── detection/      # ArUco + YOLO26 pipeline
-│   ├── mcp/            # MCP server (bridge to CC)
-│   └── comms/          # MQTT client
-├── firmware/           # CyberBrick MicroPython bot code
-├── arena/              # Arena config, marker-to-bot ID mapping
+├── brain/
+│   ├── api/            # FastAPI server + static frontend
+│   │   ├── main.py     # API endpoints, WebSocket stream, vision thread
+│   │   └── static/     # HTML pages (home, control, stream)
+│   ├── vision/         # YOLO detection pipeline
+│   │   ├── detector.py # Camera capture + YOLO inference loop
+│   │   └── state.py    # In-memory scene state + frame buffers
+│   ├── voice/          # Voice command pipeline
+│   │   └── listener.py # Audio capture + mlx-qwen3-asr transcription
+│   └── cli.py          # Typer CLI (legion command)
+├── firmware/
+│   └── soccerbot/      # CyberBrick MicroPython bot code
+│       ├── boot.py     # Custom boot (skips RC stack)
+│       ├── main.py     # WiFi + MQTT + motor control
+│       └── config.json # WiFi creds + broker IP
 └── docs/plans/         # Design docs
 ```
 
 ## CLI (`legion`)
 
 ```bash
-# Start web server (FastAPI + joystick UI)
-legion serve start
-legion serve start --port 8080
-legion serve start --bg          # run in background
-
-# Stop web server
+# Server
+legion serve start              # foreground
+legion serve start --bg         # background
 legion serve stop
 
-# Move a bot — bot_id, angle (degrees), speed (0-2048), duration (seconds)
-legion move 1 0 1500 2.0        # bot 1, forward, speed 1500, 2s
-legion move 1 90 1000 0.5       # bot 1, right
-legion move 1 180 800 1.0       # bot 1, backward
-legion move 1 270 1200 0.5      # bot 1, left
+# Bot control — all args required
+legion move <bot_id> <angle> <speed> <duration>
+legion kick <bot_id> <duration>
+legion stop <bot_id>
 
-# Kick — bot_id, duration (seconds)
-legion kick 1 1.0
+# Vision
+legion vision start [--bg]
+legion vision stop
 
-# Emergency stop
-legion stop 1
+# Scene queries (requires server running with vision active)
+legion scene state              # full JSON
+legion scene bots               # bot positions only
+legion scene objects            # detected objects only
+legion scene describe           # human-readable summary
+
+# Voice
+legion listen start [--bg]
+legion listen stop
 ```
 
-Angle mapping: 0°=forward, 90°=right, 180°=backward, 270°=left. All commands auto-stop after the specified duration.
+Angle mapping: 0°=forward, 90°=right, 180°=backward, 270°=left. Uses differential drive math — angle+speed converted to per-motor speeds. All commands auto-stop after duration.
+
+## Web UI
+
+- **/** — Homepage with links
+- **/control** — Joystick + bot commands
+- **/stream** — Live camera feed with start/stop capture, raw/YOLO toggle
+- **/docs** — Auto-generated API docs
 
 ## Bot Calibration
 
 ### Bot 1 (SoccerBot)
 - **Straight line drift:** Right motor runs ~16% faster. Use angle ~350° (10° left) to go straight. At speed 1000: L=811, R=1158.
 - **90° turn:** 0.42s at speed 1000 for both left and right.
+- **Servo:** Burned out (needs 360° replacement). Kick commands wired up but no physical servo.
 - Surface friction and battery level cause variance.
 
 ## CyberBrick Reference
 
 Primary reference for all CyberBrick firmware work:
-- **Official repo**: [CyberBrick-Official/CyberBrick_Controller_Core](https://github.com/CyberBrick-Official/CyberBrick_Controller_Core) — contains MotorsController, ServosController, boot.py, bbl/ drivers
+- **Official repo**: [CyberBrick-Official/CyberBrick_Controller_Core](https://github.com/CyberBrick-Official/CyberBrick_Controller_Core)
 - **API docs**: [makerworld.com/en/cyberbrick/api-doc/](https://makerworld.com/en/cyberbrick/api-doc/)
 - **Community WiFi example**: [shuwn/CyberBrick_V7RC_Controller](https://github.com/shuwn/CyberBrick_V7RC_Controller)
 
 ## Conventions
 
-- ArUco marker IDs map 1:1 to MQTT bot IDs
-- All bot commands and responses are structured JSON — no free-form text parsing
+- All bot commands are structured JSON — no free-form text parsing
 - Bot command schema: `{"action": str, "params": dict}` sent to `legion/bot/{id}/command`
-- Bot telemetry publishes to `legion/bot/{id}/telemetry`
 - Use `pathlib.Path` for all file/directory paths
 - When using Claude programmatically, use `claude-agent-sdk`, not the `anthropic` package
-- Use `uv` for Python dependency management (not pip/venv). Run `uv sync` to install, `uv run` to execute.
+- Use `uv` for Python dependency management. Run `uv sync` to install, `uv run` to execute.
+- Always use `legion` CLI for server/vision/listen management — never raw uvicorn/nohup
