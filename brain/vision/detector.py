@@ -74,23 +74,51 @@ def _detect_aruco(frame):
     return bots
 
 
+# COCO labels we care about — everything else is filtered out
+BOT_LABELS = {"car", "truck", "motorcycle", "bus"}
+BALL_LABELS = {"sports ball", "frisbee", "clock"}
+TRACKED_LABELS = BOT_LABELS | BALL_LABELS
+
+
 def _detect_yolo(model, frame):
-    """Run YOLOE-26 detection → scene objects."""
-    results = model(frame, verbose=False, conf=0.5)[0]
+    """Run YOLOE-26 detection → scene objects (filtered to bots + balls only)."""
+    results = model(frame, verbose=False)[0]
     objects = []
 
-    for box in results.boxes:
+    for i, box in enumerate(results.boxes):
         label = results.names[int(box.cls)]
+        if label not in TRACKED_LABELS:
+            continue
+
         x1, y1, x2, y2 = box.xyxy[0].tolist()
         cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
         conf = float(box.conf)
 
-        objects.append({
+        obj = {
             "label": label,
+            "type": "bot" if label in BOT_LABELS else "ball",
             "position_px": [round(cx), round(cy)],
             "bbox": [round(x1), round(y1), round(x2), round(y2)],
             "confidence": round(conf, 3),
-        })
+        }
+
+        # Add segmentation mask info for orientation estimation
+        if results.masks is not None and i < len(results.masks):
+            mask = results.masks[i].xy[0]  # polygon points
+            if len(mask) >= 4:
+                # Compute orientation from mask's major axis (PCA-like)
+                pts = mask.astype(np.float32)
+                mean = pts.mean(axis=0)
+                centered = pts - mean
+                cov = np.cov(centered.T)
+                eigenvalues, eigenvectors = np.linalg.eigh(cov)
+                # Major axis direction = eigenvector with largest eigenvalue
+                major_axis = eigenvectors[:, -1]
+                angle = math.degrees(math.atan2(-major_axis[1], major_axis[0])) % 360
+                obj["orientation_deg"] = round(angle, 1)
+                obj["elongation"] = round(float(eigenvalues[-1] / max(eigenvalues[0], 1e-6)), 2)
+
+        objects.append(obj)
 
     return objects, results
 
@@ -193,7 +221,7 @@ async def run_vision(source=DEFAULT_SOURCE):
     global _stop
     _stop = False
 
-    yolo_model = await asyncio.to_thread(YOLO, "yoloe-26s-seg-pf.pt")
+    yolo_model = await asyncio.to_thread(YOLO, "yolo26n-seg.pt")
     cap = await asyncio.to_thread(cv2.VideoCapture, source)
 
     if not cap.isOpened():
