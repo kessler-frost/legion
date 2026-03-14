@@ -8,6 +8,10 @@ from bbl.motors import MotorsController
 from bbl.servos import ServosController
 
 
+motors = None
+servos = None
+
+
 def load_config():
     with open("config.json") as f:
         return json.load(f)
@@ -23,32 +27,37 @@ def wifi_connect(ssid, password):
     return wlan
 
 
-motors = MotorsController()
-servos = ServosController()
-
-ACTIONS = {
-    "forward":  lambda p: (motors.set_speed(1,  p.get("speed", 1500)), motors.set_speed(2,  p.get("speed", 1500))),
-    "backward": lambda p: (motors.set_speed(1, -p.get("speed", 1500)), motors.set_speed(2, -p.get("speed", 1500))),
-    "left":     lambda p: (motors.set_speed(1, -p.get("speed", 1500)), motors.set_speed(2,  p.get("speed", 1500))),
-    "right":    lambda p: (motors.set_speed(1,  p.get("speed", 1500)), motors.set_speed(2, -p.get("speed", 1500))),
-    "stop":     lambda p: (motors.set_speed(1, 0), motors.set_speed(2, 0)),
-}
+def stop_all():
+    motors.stop(1)
+    motors.stop(2)
+    servos.set_angle(1, 90)
 
 
-async def kick():
-    servos.set_angle(1, 180)
-    await asyncio.sleep(0.3)
+def kick():
+    print("KICK: spin")
     servos.set_angle(1, 0)
+    time.sleep(1)
+    print("KICK: stop")
+    servos.set_angle(1, 90)
+    print("KICK: done")
 
 
 def on_message(topic, msg):
+    print(f"CMD: {msg}")
     cmd = json.loads(msg)
     action = cmd.get("action")
     params = cmd.get("params", {})
-    if action == "kick":
-        asyncio.create_task(kick())
-    elif action in ACTIONS:
-        ACTIONS[action](params)
+    actions = {
+        "forward":  lambda: (motors.set_speed(1,  params.get("speed", 1500)), motors.set_speed(2, -params.get("speed", 1500))),
+        "backward": lambda: (motors.set_speed(1, -params.get("speed", 1500)), motors.set_speed(2,  params.get("speed", 1500))),
+        "left":     lambda: (motors.set_speed(1, params.get("speed", 1500)), motors.stop(2)),
+        "right":    lambda: (motors.stop(1), motors.set_speed(2, -params.get("speed", 1500))),
+        "stop":     lambda: stop_all(),
+        "kick":     lambda: kick(),
+    }
+    handler = actions.get(action)
+    if handler:
+        handler()
 
 
 async def mqtt_loop(client):
@@ -58,8 +67,17 @@ async def mqtt_loop(client):
 
 
 def run():
+    global motors, servos
     config = load_config()
     wifi_connect(config["wifi_ssid"], config["wifi_password"])
+
+    # Init motors first (easypwm.init()), then servos after so servo PWM isn't clobbered
+    motors = MotorsController()
+    print("Motors ready")
+
+    servos = ServosController()
+    servos.set_angle(1, 90)
+    print("Servos ready")
 
     client = MQTTClient(
         client_id=f"legion_bot_{config['bot_id']}",
@@ -70,6 +88,11 @@ def run():
     client.connect()
     topic = f"legion/bot/{config['bot_id']}/command"
     client.subscribe(topic.encode())
-    print(f"Subscribed to {topic}")
 
+    # Drain any queued messages before announcing ready
+    for _ in range(10):
+        client.check_msg()
+        time.sleep_ms(50)
+
+    print("Ready")
     asyncio.run(mqtt_loop(client))
