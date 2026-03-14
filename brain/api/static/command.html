@@ -223,6 +223,7 @@
                 <input type="text" id="cmd-input" placeholder="type a command..." autocomplete="off">
                 <button class="send-btn" onclick="sendText()">send</button>
                 <button class="mic-btn" id="mic-btn" onclick="toggleMic()">mic</button>
+                <button class="mic-btn" id="auto-btn" onclick="toggleAutoListen()">auto</button>
             </div>
         </div>
     </div>
@@ -351,7 +352,7 @@
             if (e.key === "Enter") sendText();
         });
 
-        // --- Mic ---
+        // --- Mic (manual) ---
         let mediaRecorder = null;
         let recording = false;
         let audioChunks = [];
@@ -381,6 +382,96 @@
                 micBtn.textContent = "stop";
                 micBtn.classList.add("recording");
             }
+        }
+
+        // --- Auto-listen (continuous with 3s silence threshold) ---
+        const autoBtn = document.getElementById("auto-btn");
+        let autoListening = false;
+        let autoStream = null;
+        let audioContext = null;
+        let analyser = null;
+        let silenceStart = null;
+        const SILENCE_THRESHOLD = 0.01;
+        const SILENCE_DURATION = 3000; // 3 seconds
+
+        async function toggleAutoListen() {
+            if (autoListening) {
+                stopAutoListen();
+            } else {
+                startAutoListen();
+            }
+        }
+
+        async function startAutoListen() {
+            autoStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            audioContext = new AudioContext();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 512;
+            const source = audioContext.createMediaStreamSource(autoStream);
+            source.connect(analyser);
+
+            autoListening = true;
+            autoBtn.textContent = "stop";
+            autoBtn.classList.add("recording");
+
+            startAutoRecording();
+        }
+
+        function stopAutoListen() {
+            autoListening = false;
+            autoBtn.textContent = "auto";
+            autoBtn.classList.remove("recording");
+            if (autoStream) autoStream.getTracks().forEach(t => t.stop());
+            if (audioContext) audioContext.close();
+        }
+
+        function getRMS() {
+            const data = new Float32Array(analyser.fftSize);
+            analyser.getFloatTimeDomainData(data);
+            let sum = 0;
+            for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
+            return Math.sqrt(sum / data.length);
+        }
+
+        function startAutoRecording() {
+            if (!autoListening) return;
+
+            const rec = new MediaRecorder(autoStream);
+            const chunks = [];
+            let speaking = false;
+            silenceStart = null;
+
+            rec.ondataavailable = (e) => chunks.push(e.data);
+            rec.onstop = async () => {
+                if (speaking && chunks.length > 0) {
+                    const blob = new Blob(chunks, { type: "audio/wav" });
+                    const form = new FormData();
+                    form.append("audio", blob, "recording.wav");
+                    addMessage({ type: "status", text: "transcribing..." });
+                    await fetch("/brain/listen", { method: "POST", body: form });
+                }
+                if (autoListening) startAutoRecording();
+            };
+
+            rec.start();
+
+            const check = setInterval(() => {
+                if (!autoListening) {
+                    clearInterval(check);
+                    rec.stop();
+                    return;
+                }
+                const rms = getRMS();
+                if (rms > SILENCE_THRESHOLD) {
+                    speaking = true;
+                    silenceStart = null;
+                } else if (speaking && !silenceStart) {
+                    silenceStart = Date.now();
+                } else if (speaking && silenceStart && Date.now() - silenceStart > SILENCE_DURATION) {
+                    clearInterval(check);
+                    rec.stop();
+                }
+            }, 100);
         }
     </script>
 </body>

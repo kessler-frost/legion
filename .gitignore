@@ -214,7 +214,8 @@ __marimo__/
 .legion-*.pid
 .legion-snapshots/
 
-# YOLO model weights
+# Model weights
 *.pt
+models/
 .DS_Store
 mobileclip2_b.ts

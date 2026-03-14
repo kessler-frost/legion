@@ -19,6 +19,7 @@ dependencies = [
     "av>=14",
     "mlx-qwen3-asr>=0.1",
     "claude-agent-sdk>=0.1.48",
+    "coremltools>=8",
 ]
 
 [project.scripts]
