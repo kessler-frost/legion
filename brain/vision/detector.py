@@ -17,7 +17,7 @@ def request_stop():
 
 def run(source=DEFAULT_SOURCE):
     _stop_event.clear()
-    model = YOLO("yolo11n.pt")
+    model = YOLO("yoloe-26s-seg-pf.pt")
     cap = cv2.VideoCapture(source)
 
     print(f"Vision started — reading from {source}")
