@@ -40,6 +40,7 @@ async def run(voice: bool = False):
         system_prompt=SYSTEM_PROMPT,
         allowed_tools=["Bash"],
         cwd="/Users/fimbulwinter/dev/legion",
+        model="claude-sonnet-4-6",
     )
 
     asyncio.create_task(read_stdin(input_queue))
