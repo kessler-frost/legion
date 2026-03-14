@@ -71,6 +71,8 @@ async def vision_stop():
     global _vision_task
     from brain.vision.detector import request_stop
     request_stop()
+    if _vision_task and _vision_task.is_alive():
+        _vision_task.join(timeout=5)
     _vision_task = None
     return {"status": "stopped"}
 
