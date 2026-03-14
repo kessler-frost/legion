@@ -255,3 +255,20 @@ def listen_stop():
     LISTEN_PID_FILE.unlink()
     os.kill(pid, signal.SIGTERM)
     typer.echo(f"listener stopped (pid {pid})")
+
+
+# ---------------------------------------------------------------------------
+# Brain (CC reasoning)
+# ---------------------------------------------------------------------------
+
+brain_app = typer.Typer(no_args_is_help=True)
+app.add_typer(brain_app, name="brain")
+
+
+@brain_app.command("start")
+def brain_start(
+    voice: bool = typer.Option(False, "--voice", help="Enable voice commands from iPhone mic"),
+):
+    """Start the CC brain session (interactive)."""
+    from brain.reasoning.brain import run
+    asyncio.run(run(voice=voice))
