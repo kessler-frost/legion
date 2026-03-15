@@ -29,23 +29,6 @@ async def _publish(topic: str, payload: dict):
         await client.publish(topic, json.dumps(payload))
 
 
-def angle_speed_to_motors(angle: float, speed: int) -> tuple[int, int]:
-    """Convert angle (degrees) + speed to left/right motor speeds.
-
-    0°=forward, 90°=right, 180°=backward, 270°=left.
-    Uses differential drive: dx steers, dy throttles.
-    """
-    rad = math.radians(angle)
-    dx = math.sin(rad)
-    dy = -math.cos(rad)
-
-    left = int(-dy * speed + dx * speed)
-    right = int(-dy * speed - dx * speed)
-
-    left = max(-MAX_SPEED, min(MAX_SPEED, left))
-    right = max(-MAX_SPEED, min(MAX_SPEED, right))
-
-    return left, right
 
 
 serve_app = typer.Typer(no_args_is_help=True, help="Manage the web server (start/stop).")
@@ -97,12 +80,13 @@ def serve_stop():
 @app.command()
 def move(
     bot_id: int = typer.Argument(help="Bot ID"),
-    angle: float = typer.Argument(help="Direction in degrees (0=forward, 90=right, 180=backward, 270=left)"),
-    speed: int = typer.Argument(help="Speed (0-2048)"),
+    left: int = typer.Argument(help="Left motor speed (-2048 to 2048, positive=forward)"),
+    right: int = typer.Argument(help="Right motor speed (-2048 to 2048, positive=forward)"),
     duration: float = typer.Argument(help="Duration in seconds"),
 ):
-    """Move a bot in a direction for a duration."""
-    left, right = angle_speed_to_motors(angle, speed)
+    """Move a bot by setting left and right motor speeds directly."""
+    left = max(-MAX_SPEED, min(MAX_SPEED, left))
+    right = max(-MAX_SPEED, min(MAX_SPEED, right))
     topic = f"legion/bot/{bot_id}/command"
 
     typer.echo(f"bot {bot_id}: L={left} R={right} for {duration}s")

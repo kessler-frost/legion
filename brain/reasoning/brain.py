@@ -38,43 +38,37 @@ Use scene state for precise bot positions/headings. Use snapshot to see the scen
 ## How to Act
 
 ```
-legion move <bot_id> <angle> <speed> <duration>
+legion move <bot_id> <left_speed> <right_speed> <duration>
 legion stop <bot_id>
 ```
 
-## How the Bot Works
+Direct motor control. Left and right motor speeds from -2048 to 2048. Positive = forward, negative = backward. Duration in seconds — bot auto-stops after.
 
-The bot has 2 independently controlled DC motors (left and right wheels) — differential drive / skid steer. The `legion move` command converts angle + speed into per-motor speeds:
-- **angle** controls direction: 0°=forward, 90°=right, 180°=backward, 270°=left
-- **speed** (0-2048) controls how fast
-- **duration** in seconds — bot auto-stops after
-
-The angle uses differential drive math:
-- 0° → both motors forward (equal speed)
-- 90° → left motor forward, right motor backward (spin right in place)
-- 180° → both motors backward
-- 270° → left motor backward, right motor forward (spin left in place)
-- Any angle in between → curved path (e.g., 45° = forward + right)
+**Examples:**
+- **Forward**: `legion move 1 1000 1000 1.0` (both motors forward)
+- **Backward**: `legion move 1 -1000 -1000 1.0`
+- **Spin right**: `legion move 1 1000 -1000 0.42` (left forward, right backward)
+- **Spin left**: `legion move 1 -1000 1000 0.42`
+- **Curve right**: `legion move 1 1000 500 1.0` (left faster than right)
+- **Curve left**: `legion move 1 500 1000 1.0` (right faster than left)
 
 ## Calibration (Bot 1, ArUco marker ID 2)
 
-**Motor imbalance**: Right motor is ~16% faster than left. Compensate:
-- **Straight forward**: angle ~350° (10° left of 0°)
-- **Straight backward**: angle ~170° (10° left of 180°)
+**Motor imbalance**: Right motor is ~16% faster than left. For straight forward, give the left motor more power:
+- **Straight forward**: `legion move 1 1000 850 1.0` (left=1000, right=850)
+- **Straight backward**: `legion move 1 -1000 -850 1.0`
 
 **Turns** (at speed 1000):
-- **90° left turn**: `legion move 1 270 1000 0.42`
-- **90° right turn**: `legion move 1 90 1000 0.42`
-- **45° turn**: ~0.21s at speed 1000
-- **180° turn**: ~0.84s at speed 1000
+- **90° right**: `legion move 1 1000 -1000 0.42`
+- **90° left**: `legion move 1 -1000 1000 0.42`
 
 **Speed guide** (tested):
-- **Tiny nudge**: speed 800, 0.3s → ~5cm
-- **Small move**: speed 1000, 0.5s → ~10cm
-- **Moderate move**: speed 1000, 1.0s → ~15-20cm
-- **Large move**: speed 1000, 2.0s → ~30-40cm
+- **Tiny nudge**: speed ~800, 0.3s → ~5cm
+- **Small move**: speed ~1000, 0.5s → ~10cm
+- **Moderate move**: speed ~1000, 1.0s → ~15-20cm
+- **Large move**: speed ~1000, 2.0s → ~30-40cm
 
-**To navigate to a target**: First turn to face it (calculate angle difference from current heading), then drive forward. Always re-observe between turn and drive.
+**To navigate to a target**: Use heading from `legion scene state` to determine current facing. Turn to face the target, then drive forward. Always re-observe between turn and drive.
 
 ## Rules
 
