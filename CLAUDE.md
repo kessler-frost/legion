@@ -152,9 +152,10 @@ Angle mapping: 0°=forward, 90°=right, 180°=backward, 270°=left. Uses differe
 ## Bot Calibration
 
 ### Bot 1 (SoccerBot)
-- **Straight line drift:** Right motor runs ~16% faster. Use angle ~350° (10° left) to go straight. At speed 1000: L=811, R=1158.
-- **90° turn:** 0.42s at speed 1000 for both left and right.
-- **Servo:** Burned out (needs 360° replacement). Kick commands wired up but no physical servo.
+- **Straight line drift:** Left motor is stronger. Use L=600, R=1000 to go straight.
+- **90° right turn:** `legion move -- 1 1000 -1000 0.35`
+- **90° left turn:** `legion move -- 1 -1000 1000 0.40`
+- **Servo:** Replaced with 360° servo. Kick works.
 - Surface friction and battery level cause variance.
 
 ## CyberBrick Reference

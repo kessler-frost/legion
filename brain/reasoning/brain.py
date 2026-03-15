@@ -54,13 +54,15 @@ Direct motor control. Left and right motor speeds from -2048 to 2048. Positive =
 
 ## Calibration (Bot 1, ArUco marker ID 2)
 
-**Motor imbalance**: Right motor is ~16% faster than left. For straight forward, give the left motor more power:
-- **Straight forward**: `legion move 1 1000 850 1.0` (left=1000, right=850)
-- **Straight backward**: `legion move 1 -1000 -850 1.0`
+**Motor imbalance**: Left motor is stronger. Ratio for straight line: left=600, right=1000.
+- **Straight forward**: `legion move 1 600 1000 <duration>`
+- **Straight backward**: `legion move -- 1 -600 -1000 <duration>`
 
 **Turns** (at speed 1000):
-- **90° right**: `legion move 1 1000 -1000 0.42`
-- **90° left**: `legion move 1 -1000 1000 0.42`
+- **90° right**: `legion move -- 1 1000 -1000 0.35`
+- **90° left**: `legion move -- 1 -1000 1000 0.40`
+
+Note: use `--` before negative speeds so they aren't parsed as flags.
 
 **Speed guide** (tested):
 - **Tiny nudge**: speed ~800, 0.3s → ~5cm
