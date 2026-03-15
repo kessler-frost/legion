@@ -231,6 +231,7 @@
                 <div class="input-buttons">
                     <button class="send-btn" onclick="sendText()">send</button>
                     <button class="send-btn" id="stop-btn" onclick="interruptBrain()" style="border-color:var(--danger);color:var(--danger)">stop</button>
+                    <button class="send-btn" onclick="clearChat()">clear</button>
                     <button class="mic-btn" id="mic-btn" onclick="toggleMic()">mic</button>
                     <button class="mic-btn" id="auto-btn" onclick="toggleAutoListen()">auto</button>
                 </div>
@@ -373,6 +374,12 @@
         });
 
         connectBrain();
+
+        // --- Clear ---
+        async function clearChat() {
+            await fetch("/brain/clear", { method: "POST" });
+            messagesEl.innerHTML = "";
+        }
 
         // --- Interrupt ---
         async function interruptBrain() {

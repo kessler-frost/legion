@@ -98,6 +98,10 @@ def get_history() -> list[dict]:
     return _message_history.copy()
 
 
+def clear_history():
+    _message_history.clear()
+
+
 def _broadcast(msg: dict):
     _message_history.append(msg)
     if len(_message_history) > MAX_HISTORY:

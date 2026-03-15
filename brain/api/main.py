@@ -168,6 +168,13 @@ async def brain_history():
     return get_history()
 
 
+@app.post("/brain/clear")
+async def brain_clear():
+    from brain.reasoning.brain import clear_history
+    clear_history()
+    return {"status": "cleared"}
+
+
 @app.post("/brain/interrupt")
 async def brain_interrupt():
     from brain.reasoning.brain import interrupt_brain
