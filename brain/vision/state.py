@@ -66,18 +66,21 @@ def get_snapshot_with_depth() -> dict:
     if frame is None:
         return {"path": str(path), "depth": None}
 
-    from brain.vision.depth import get_depth_at_points
+    depth_info = None
+    try:
+        from brain.vision.depth import get_depth_at_points
 
-    # Collect points to sample: all bot positions + frame center
-    points = []
-    h, w = frame.shape[:2]
-    points.append((w // 2, h // 2))  # center
+        points = []
+        h, w = frame.shape[:2]
+        points.append((w // 2, h // 2))
 
-    for bot in state.get("bots", []):
-        px, py = bot["position_px"]
-        points.append((px, py))
+        for bot in state.get("bots", []):
+            px, py = bot["position_px"]
+            points.append((px, py))
 
-    depth_info = get_depth_at_points(frame, points)
+        depth_info = get_depth_at_points(frame, points)
+    except Exception as e:
+        print(f"Depth failed: {e}")
 
     return {
         "path": str(path),

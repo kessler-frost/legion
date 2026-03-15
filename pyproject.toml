@@ -21,6 +21,14 @@ dependencies = [
     "claude-agent-sdk>=0.1.48",
     "coremltools>=8",
     "lapx>=0.5",
+    "omegaconf",
+    "einops",
+    "addict",
+    "kornia",
+    "e3nn",
+    "moviepy==1.0.3",
+    "plyfile",
+    "pillow-heif",
 ]
 
 [project.scripts]
