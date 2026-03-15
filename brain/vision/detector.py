@@ -26,7 +26,7 @@ DIST_COEFFS = np.zeros(5, dtype=np.float64)
 MARKER_SIZE = 0.04
 
 MARKER_TO_BOT = {2: 1}
-HEADING_OFFSET = 90
+HEADING_OFFSET = 0
 
 _stop_event = threading.Event()
 
