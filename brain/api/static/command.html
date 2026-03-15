@@ -385,7 +385,7 @@
 
         function stopAutoListen() {
             autoListening = false;
-            autoBtn.textContent = "auto";
+            autoBtn.textContent = "listen";
             autoBtn.classList.remove("recording");
             if (autoStream) autoStream.getTracks().forEach(t => t.stop());
             if (audioContext) audioContext.close();
