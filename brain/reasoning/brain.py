@@ -73,14 +73,28 @@ All motor speeds are pre-calibrated. Just pick direction + duration.
 
 ## How to Navigate to a Target
 
-1. Take snapshot — get depth_m of bot and target
-2. Compare depth values to judge real distance (NOT pixel distance)
-3. Turn to face the target using `legion left` or `legion right`
-4. Drive forward with `legion forward`
-5. Re-observe after EVERY move
-6. Bot and target are only close when their depth_m values are within ~0.02m
-7. If depth values still differ by >0.03m, keep driving — you're not there yet
-8. Only kick when depth values match AND pixel positions are close
+1. `legion scene state --full` — get positions + depth of everything
+2. Figure out which direction the target is relative to the bot:
+   - Compare pixel positions AND depth_m values
+   - Target with LOWER depth_m = closer to camera = "in front" on the floor
+   - Target with HIGHER depth_m = further from camera = "behind" on the floor
+3. **TURN FIRST** — always face the target before driving:
+   - Use bot's heading_deg and target's pixel position to decide left/right
+   - Turn with `legion left` or `legion right` (small durations like 0.1-0.2s)
+   - Re-observe heading after turning
+4. **Drive forward in small increments** — 0.3-0.5s at a time
+5. **Re-observe after EVERY move** — check depth_m difference
+6. **STOP when depth_m values are within 0.05m** — you're close enough
+   - Do NOT drive closer — you'll collide
+   - The bot is ~8cm long, so stop when ~10cm away
+7. **To kick**: make sure heading points toward the target, then `legion kick 1 0.5`
+
+## Common Mistakes to Avoid
+
+- Do NOT drive until you collide — stop 10cm away
+- Do NOT kick without facing the target — turn first
+- Do NOT trust pixel distance alone — always check depth_m
+- Do NOT make large moves (>0.5s) near a target — use 0.2-0.3s nudges
 
 ## Rules
 
