@@ -41,9 +41,12 @@ def _detect_aruco(frame):
     if ids is None:
         return bots
 
-    rvecs, tvecs, _ = cv2.aruco.estimatePoseSingleMarkers(
-        corners, MARKER_SIZE, CAMERA_MATRIX, DIST_COEFFS,
-    )
+    obj_points = np.array([
+        [-MARKER_SIZE / 2,  MARKER_SIZE / 2, 0],
+        [ MARKER_SIZE / 2,  MARKER_SIZE / 2, 0],
+        [ MARKER_SIZE / 2, -MARKER_SIZE / 2, 0],
+        [-MARKER_SIZE / 2, -MARKER_SIZE / 2, 0],
+    ], dtype=np.float32)
 
     for i, marker_id in enumerate(ids.flatten()):
         c = corners[i][0]
@@ -62,8 +65,9 @@ def _detect_aruco(frame):
             "heading_deg": round(heading, 1),
         }
 
-        if tvecs is not None:
-            t = tvecs[i][0]
+        ret, rvec, tvec = cv2.solvePnP(obj_points, c, CAMERA_MATRIX, DIST_COEFFS)
+        if ret:
+            t = tvec.flatten()
             bot["position_3d_m"] = [round(float(t[0]), 3), round(float(t[1]), 3), round(float(t[2]), 3)]
 
         bots.append(bot)
