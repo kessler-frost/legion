@@ -26,7 +26,7 @@ DIST_COEFFS = np.zeros(5, dtype=np.float64)
 MARKER_SIZE = 0.04
 
 MARKER_TO_BOT = {2: 1}
-HEADING_OFFSET = 0
+HEADING_OFFSET = 2.1  # calibrated: ArUco reads 357.9° when bot faces true 0° (up)
 
 _stop_event = threading.Event()
 
@@ -51,7 +51,8 @@ def _detect_aruco(frame):
 
         dx = c[1][0] - c[0][0]
         dy = c[1][1] - c[0][1]
-        heading = (math.degrees(math.atan2(-dy, dx)) + HEADING_OFFSET) % 360
+        raw_heading = math.degrees(math.atan2(-dy, dx))
+        heading = (360 - raw_heading + HEADING_OFFSET) % 360
 
         bot_id = MARKER_TO_BOT.get(int(marker_id), int(marker_id))
 
@@ -76,6 +77,7 @@ def _annotate(frame, bots):
         px, py = bot["position_px"]
         heading = bot["heading_deg"]
         rad = math.radians(heading)
+        # Clockwise: 0°=up, 90°=right, 180°=down, 270°=left
         ax = int(px + 50 * math.sin(rad))
         ay = int(py - 50 * math.cos(rad))
 
