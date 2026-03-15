@@ -37,16 +37,38 @@ legion move <bot_id> <angle> <speed> <duration>
 legion stop <bot_id>
 ```
 
-Angle: 0°=forward, 90°=right, 180°=backward, 270°=left. Speed: 0-2048. Duration: seconds.
+## How the Bot Works
 
-## Calibration (Bot 1, marker ID 2)
+The bot has 2 independently controlled DC motors (left and right wheels) — differential drive / skid steer. The `legion move` command converts angle + speed into per-motor speeds:
+- **angle** controls direction: 0°=forward, 90°=right, 180°=backward, 270°=left
+- **speed** (0-2048) controls how fast
+- **duration** in seconds — bot auto-stops after
 
-- **Forward**: angle ~350° (NOT 0° — right motor ~16% faster)
-- **Backward**: angle ~170°
+The angle uses differential drive math:
+- 0° → both motors forward (equal speed)
+- 90° → left motor forward, right motor backward (spin right in place)
+- 180° → both motors backward
+- 270° → left motor backward, right motor forward (spin left in place)
+- Any angle in between → curved path (e.g., 45° = forward + right)
+
+## Calibration (Bot 1, ArUco marker ID 2)
+
+**Motor imbalance**: Right motor is ~16% faster than left. Compensate:
+- **Straight forward**: angle ~350° (10° left of 0°)
+- **Straight backward**: angle ~170° (10° left of 180°)
+
+**Turns** (at speed 1000):
 - **90° left turn**: `legion move 1 270 1000 0.42`
 - **90° right turn**: `legion move 1 90 1000 0.42`
-- **Small nudge**: speed 800, duration 0.3-0.5s
-- **Moderate move**: speed 1000, duration 1-2s
+- **45° turn**: ~0.21s at speed 1000
+- **180° turn**: ~0.84s at speed 1000
+
+**Speed guide**:
+- **Gentle nudge**: speed 600-800, duration 0.3-0.5s (~5-10cm)
+- **Moderate move**: speed 1000, duration 1-2s (~20-40cm)
+- **Fast move**: speed 1500, duration 1-2s (~40-80cm)
+
+**To navigate to a target**: First turn to face it (calculate angle difference from current heading), then drive forward. Always re-observe between turn and drive.
 
 ## Rules
 
