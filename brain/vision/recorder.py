@@ -28,6 +28,7 @@ def start_recording(video_device: int = 0, audio_device: int = 0) -> Path:
             "-framerate", "30",
             "-video_size", "1280x720",
             "-i", f"{video_device}:{audio_device}",
+            "-vf", "hflip,vflip",
             "-c:v", "libx264",
             "-preset", "ultrafast",
             "-crf", "23",
