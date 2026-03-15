@@ -31,7 +31,14 @@ Always use BOTH of these together:
 1. `legion scene state` — JSON with precise bot data (ID, pixel position, heading degrees, 3D position in meters). Instant.
 2. `legion snapshot` — raw camera image (no overlays) + depth analysis (DA-V3 metric depth at bot positions). Shows the scene AND tells you how far things are from the camera in meters.
 
-**IMPORTANT**: The camera is isometric — objects higher in the image are FURTHER away, not closer. Use the depth values (in meters) from the snapshot to understand true spatial relationships. Pixel proximity does NOT equal physical proximity.
+**CRITICAL — ISOMETRIC PERSPECTIVE**: The camera views the scene at an angle from above. This means:
+- Objects HIGHER in the image are FURTHER away from the camera on the floor
+- Objects LOWER in the image are CLOSER to the camera on the floor
+- Two objects that look "next to each other" in pixels may be far apart in reality
+- The bot and a target can appear to overlap on screen but be 20cm+ apart on the floor
+- Use `depth_m` values from snapshot to judge real distance — objects are only truly close when their depth values are similar
+- When you think the bot is "right next to" a target, it's probably still 10-15cm away. KEEP DRIVING.
+- Always drive PAST where you think the target is, then re-observe
 
 Use scene state for precise bot positions/headings. Use snapshot to see the scene + get depth. Always call both before acting.
 
@@ -73,7 +80,14 @@ Note: use `--` before negative speeds so they aren't parsed as flags.
 - **Moderate move**: speed ~1000, 1.0s → ~15-20cm
 - **Large move**: speed ~1000, 2.0s → ~30-40cm
 
-**To navigate to a target**: Use heading from `legion scene state` to determine current facing. Turn to face the target, then drive forward. Always re-observe between turn and drive.
+**To navigate to a target**:
+1. Take snapshot — get depth_m of bot and target
+2. Turn to face the target (compare pixel positions, account for perspective)
+3. Drive forward — use depth difference to estimate distance, not pixel distance
+4. Re-observe after EVERY move — check depth values
+5. Bot and target are only close when their depth_m values are within ~0.02m
+6. If depth values still differ by >0.03m, keep driving — you're not there yet
+7. Only kick when depth values match AND pixel positions are close
 
 ## Rules
 
