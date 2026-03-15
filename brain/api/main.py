@@ -32,8 +32,12 @@ async def lifespan(app: FastAPI):
     yield
 
 
+RECORDINGS_DIR = Path(__file__).parent.parent.parent / "recordings"
+
 app = FastAPI(title="Legion Bot Control", lifespan=lifespan)
 app.mount("/assets", StaticFiles(directory=STATIC_DIR), name="assets")
+RECORDINGS_DIR.mkdir(exist_ok=True)
+app.mount("/rec", StaticFiles(directory=RECORDINGS_DIR), name="rec")
 
 
 # --- Pages ---
@@ -81,6 +85,43 @@ async def vision_status():
     running = _vision_task is not None and _vision_task.is_alive()
     return {"running": running}
 
+
+# --- Recording ---
+
+@app.post("/recording/start")
+async def recording_start():
+    from brain.vision.recorder import start_recording, is_recording
+    if is_recording():
+        return {"status": "already recording"}
+    path = start_recording()
+    return {"status": "started", "path": str(path)}
+
+
+@app.post("/recording/stop")
+async def recording_stop():
+    from brain.vision.recorder import stop_recording
+    stop_recording()
+    return {"status": "stopped"}
+
+
+@app.get("/recording/status")
+async def recording_status():
+    from brain.vision.recorder import is_recording
+    return {"recording": is_recording()}
+
+
+@app.get("/recording/list")
+async def recording_list():
+    from brain.vision.recorder import list_recordings
+    return list_recordings()
+
+
+@app.get("/recordings", response_class=HTMLResponse)
+async def recordings_page():
+    return (STATIC_DIR / "recordings.html").read_text()
+
+
+# --- Scene ---
 
 @app.get("/scene/state")
 async def scene_state():

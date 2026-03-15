@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legion — Recordings</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;600;700&family=IBM+Plex+Mono:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050505;
+            --surface: #111113;
+            --border: #2a2a30;
+            --text: #e8e6e3;
+            --text-dim: #6b6a6f;
+            --accent: #c4a35a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Familjen Grotesk', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 2rem;
+            position: relative;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: radial-gradient(circle, #ffffff06 1px, transparent 1px);
+            background-size: 24px 24px;
+            pointer-events: none;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .wordmark {
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+        a.back {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            text-decoration: none;
+            letter-spacing: 0.1em;
+        }
+        a.back:hover { color: var(--accent); }
+        .recordings {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            max-width: 800px;
+        }
+        .rec-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            background: var(--surface);
+            cursor: pointer;
+            transition: border-color 0.15s;
+        }
+        .rec-item:hover { border-color: var(--accent); }
+        .rec-name {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text);
+            flex: 1;
+        }
+        .rec-meta {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--text-dim);
+        }
+        .player {
+            margin-bottom: 2rem;
+            max-width: 800px;
+        }
+        .player video {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+        }
+        .empty {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--text-dim);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="wordmark">Recordings</div>
+        <a class="back" href="/">← home</a>
+    </div>
+
+    <div class="player" id="player" style="display:none">
+        <video id="video" controls></video>
+    </div>
+
+    <div class="recordings" id="list"></div>
+
+    <script>
+        const listEl = document.getElementById("list");
+        const playerEl = document.getElementById("player");
+        const videoEl = document.getElementById("video");
+
+        async function loadRecordings() {
+            const recs = await fetch("/recording/list").then(r => r.json());
+            listEl.innerHTML = "";
+
+            if (recs.length === 0) {
+                listEl.innerHTML = '<div class="empty">no recordings yet</div>';
+                return;
+            }
+
+            recs.forEach(rec => {
+                const div = document.createElement("div");
+                div.className = "rec-item";
+                div.onclick = () => playRecording(rec.filename);
+
+                const date = new Date(rec.created * 1000);
+                const dateStr = date.toLocaleString();
+
+                div.innerHTML = `
+                    <div class="rec-name">${rec.filename}</div>
+                    <div class="rec-meta">${rec.size_mb} MB · ${dateStr}</div>
+                `;
+                listEl.appendChild(div);
+            });
+        }
+
+        function playRecording(filename) {
+            videoEl.src = `/rec/${filename}`;
+            playerEl.style.display = "block";
+            videoEl.play();
+        }
+
+        loadRecordings();
+    </script>
+</body>
+</html>
