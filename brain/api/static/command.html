@@ -161,17 +161,10 @@
         /* Input area */
         .input-area {
             display: flex;
-            flex-wrap: wrap;
+            justify-content: center;
             gap: 0.5rem;
             padding: 0.75rem 1rem;
             border-top: 1px solid var(--border);
-        }
-        .input-area input {
-            min-width: 0;
-        }
-        .input-buttons {
-            display: flex;
-            gap: 0.5rem;
         }
         .input-area input {
             flex: 1;
@@ -228,11 +221,9 @@
         <div class="chat-panel">
             <div class="messages" id="messages"></div>
             <div class="input-area">
-                <div class="input-buttons">
-                    <button class="mic-btn" id="auto-btn" onclick="toggleAutoListen()">auto listen</button>
-                    <button class="send-btn" id="stop-btn" onclick="interruptBrain()" style="border-color:var(--danger);color:var(--danger)">stop</button>
-                    <button class="send-btn" onclick="clearChat()">clear</button>
-                </div>
+                <button class="mic-btn" id="auto-btn" onclick="toggleAutoListen()">auto listen</button>
+                <button class="send-btn" id="stop-btn" onclick="interruptBrain()" style="border-color:var(--danger);color:var(--danger)">stop</button>
+                <button class="send-btn" onclick="clearChat()">clear</button>
             </div>
         </div>
     </div>
