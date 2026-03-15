@@ -43,7 +43,7 @@ legion stop <bot_id>
 legion kick <bot_id> <duration>
 ```
 
-**Kick**: activates the 360° servo to push/hit objects. Duration 0.5-1.0s is typical.
+**Kick**: activates the 360° servo mounted on the FRONT of the bot. To kick an object, face the bot toward it first, then kick. Duration 0.5-1.0s is typical.
 
 Direct motor control. Left and right motor speeds from -2048 to 2048. Positive = forward, negative = backward. Duration in seconds — bot auto-stops after.
 
