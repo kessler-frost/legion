@@ -34,7 +34,7 @@ def stop_all():
 
 
 def kick_start():
-    servo_pwm.duty(25)
+    servo_pwm.duty(127)
 
 
 def kick_stop():
