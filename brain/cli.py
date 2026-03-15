@@ -207,13 +207,20 @@ API_BASE = "http://localhost:8000"
 
 @scene_app.command("state")
 def scene_state(
-    depth: bool = typer.Option(False, "--depth", help="Include DA-V3 metric depth (~0.25s extra)"),
+    objects: bool = typer.Option(False, "--objects", help="Detect objects with YOLOE-26x (~80ms extra)"),
+    depth: bool = typer.Option(False, "--depth", help="Add DA-V3 metric depth (~0.25s extra)"),
+    full: bool = typer.Option(False, "--full", help="Both objects + depth"),
 ):
-    """Full scene state as JSON: bots, objects, distances. Use --depth for metric depth."""
+    """Scene state JSON. Default: bots only (instant). Add --objects, --depth, or --full."""
     import urllib.request
+    params = []
+    if objects or full:
+        params.append("objects=true")
+    if depth or full:
+        params.append("depth=true")
     url = f"{API_BASE}/scene/state"
-    if depth:
-        url += "?depth=true"
+    if params:
+        url += "?" + "&".join(params)
     resp = urllib.request.urlopen(url)
     typer.echo(json.dumps(json.loads(resp.read()), indent=2))
 

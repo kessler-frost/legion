@@ -40,12 +40,41 @@ def set_state(state: dict):
         _latest_state = state
 
 
-def get_state(with_depth: bool = False) -> dict:
+def get_state(with_objects: bool = False, with_depth: bool = False) -> dict:
     with _lock:
         state = _latest_state.copy()
         frame = _latest_raw_frame.copy() if _latest_raw_frame is not None else None
 
-    if with_depth and frame is not None:
+    if frame is None:
+        return state
+
+    # YOLO object detection — on demand
+    if with_objects:
+        try:
+            from brain.vision.detector import detect_objects_on_demand
+            objects = detect_objects_on_demand(frame)
+            state["objects"] = objects
+
+            # Compute distances
+            import math
+            distances = []
+            for bot in state.get("bots", []):
+                bx, by = bot["position_px"]
+                for obj in objects:
+                    ox, oy = obj["position_px"]
+                    px_dist = math.sqrt((bx - ox) ** 2 + (by - oy) ** 2)
+                    distances.append({
+                        "from_bot": bot["id"],
+                        "to": obj["label"],
+                        "to_position": obj["position_px"],
+                        "pixel_dist": round(px_dist),
+                    })
+            state["distances"] = distances
+        except Exception as e:
+            print(f"YOLO failed: {e}")
+
+    # Depth — on demand
+    if with_depth:
         try:
             from brain.vision.depth import get_depth_at_points
 
@@ -58,7 +87,6 @@ def get_state(with_depth: bool = False) -> dict:
             if points:
                 depth_info = get_depth_at_points(frame, points)
 
-                # Attach depth to each bot and object
                 idx = 0
                 for bot in state.get("bots", []):
                     bot["depth_m"] = depth_info["points"][idx]["depth_m"]

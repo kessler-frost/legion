@@ -4,7 +4,6 @@ import time
 
 import cv2
 import numpy as np
-from onnxruntime import YOLO
 
 from brain.vision.state import set_frames, set_state
 
@@ -31,6 +30,7 @@ MARKER_TO_BOT = {2: 1}
 HEADING_OFFSET = 2.1
 
 _stop_event = threading.Event()
+_yolo_model = None
 
 
 def request_stop():
@@ -77,12 +77,20 @@ def _detect_aruco(frame):
     return bots
 
 
-def _detect_objects(model, frame):
-    results = model.track(frame, verbose=False, conf=0.5, persist=True)[0]
+def detect_objects_on_demand(frame):
+    """Run YOLOE-26x on a frame. Called on-demand, not every frame."""
+    global _yolo_model
+    if _yolo_model is None:
+        from onnxruntime import YOLO
+        print("Vision: loading YOLOE-26x model...")
+        _yolo_model = YOLO("yoloe-26x-seg-pf.pt")
+        print("Vision: model loaded")
+
+    results = _yolo_model.track(frame, verbose=False, conf=0.5, persist=True)[0]
     objects = []
     h, w = frame.shape[:2]
 
-    for i, box in enumerate(results.boxes):
+    for box in results.boxes:
         label = results.names[int(box.cls)]
 
         x1, y1, x2, y2 = box.xyxy[0].tolist()
@@ -107,25 +115,8 @@ def _detect_objects(model, frame):
     return objects
 
 
-def _compute_distances(bots, objects):
-    distances = []
-    for bot in bots:
-        bx, by = bot["position_px"]
-        for obj in objects:
-            ox, oy = obj["position_px"]
-            px_dist = math.sqrt((bx - ox) ** 2 + (by - oy) ** 2)
-            distances.append({
-                "from_bot": bot["id"],
-                "to": obj["label"],
-                "to_position": obj["position_px"],
-                "pixel_dist": round(px_dist),
-            })
-    return distances
-
-
-def _annotate(frame, bots, objects):
+def _annotate(frame, bots):
     annotated = frame.copy()
-
     for bot in bots:
         px, py = bot["position_px"]
         heading = bot["heading_deg"]
@@ -135,20 +126,10 @@ def _annotate(frame, bots, objects):
         cv2.arrowedLine(annotated, (px, py), (ax, ay), (0, 255, 0), 2, tipLength=0.3)
         cv2.putText(annotated, f"Bot {bot['id']}", (px - 20, py - 25),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-
-    for obj in objects:
-        x1, y1, x2, y2 = obj["bbox"]
-        cv2.rectangle(annotated, (x1, y1), (x2, y2), (255, 165, 0), 2)
-        label = obj["label"]
-        if "track_id" in obj:
-            label += f" #{obj['track_id']}"
-        cv2.putText(annotated, label, (x1, y1 - 5),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 165, 0), 1)
-
     return annotated
 
 
-def _vision_loop(source, yolo_model):
+def _vision_loop(source):
     cap = cv2.VideoCapture(source)
     if not cap.isOpened():
         print("Vision: camera not available")
@@ -164,19 +145,16 @@ def _vision_loop(source, yolo_model):
 
         frame = cv2.flip(frame, -1)
 
+        # ArUco only — fast, every frame
         bots = _detect_aruco(frame)
-        objects = _detect_objects(yolo_model, frame)
-        distances = _compute_distances(bots, objects)
 
         state = {
             "bots": bots,
-            "objects": objects,
-            "distances": distances,
             "frame_size": [frame.shape[1], frame.shape[0]],
         }
         set_state(state)
 
-        annotated = _annotate(frame, bots, objects)
+        annotated = _annotate(frame, bots)
         set_frames(frame, annotated)
 
     cap.release()
@@ -185,9 +163,6 @@ def _vision_loop(source, yolo_model):
 
 def start_vision(source=DEFAULT_SOURCE):
     _stop_event.clear()
-    print("Vision: loading YOLOE-26x model...")
-    yolo_model = YOLO("yoloe-26x-seg-pf.pt")
-    print("Vision: model loaded")
-    thread = threading.Thread(target=_vision_loop, args=(source, yolo_model), daemon=True)
+    thread = threading.Thread(target=_vision_loop, args=(source,), daemon=True)
     thread.start()
     return thread
