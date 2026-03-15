@@ -11,6 +11,9 @@ DEFAULT_SOURCE = 0
 
 ARUCO_DICT = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 ARUCO_PARAMS = cv2.aruco.DetectorParameters()
+ARUCO_PARAMS.minMarkerPerimeterRate = 0.05  # ignore tiny false detections
+ARUCO_PARAMS.maxErroneousBitsInBorderRate = 0.35  # stricter border check
+ARUCO_PARAMS.errorCorrectionRate = 0.3  # less error correction = fewer false positives
 ARUCO_DETECTOR = cv2.aruco.ArucoDetector(ARUCO_DICT, ARUCO_PARAMS)
 
 CAMERA_MATRIX = np.array([
