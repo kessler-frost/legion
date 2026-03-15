@@ -1,63 +1,55 @@
 # Legion
 
-AI-controlled swarm robotics system. Handheld iPhone camera watches CyberBrick robots; a Mac Mini runs the brain.
+AI-controlled swarm robotics system. Fixed webcam watches CyberBrick robots; a Mac Mini runs the brain.
 
 ## Architecture
 
 CC uses the `legion` CLI for everything — observe, think, act.
 
 ```
-iPhone (Continuity Camera) → Vision Pipeline (YOLO) → Scene State (in-memory)
-                                                            ↑
-                                              CC (claude-agent-sdk) → legion CLI → MQTT → Bots
-                                                            ↑
-iPhone (Continuity Camera) → Voice Pipeline (mlx-qwen3-asr) → Transcribed Commands
+USB Webcam (C270) → ArUco (every frame) + YOLOE-26x (on demand) + DA-V3 (on demand)
+                                                      ↑
+                                        CC (claude-agent-sdk) → legion CLI → MQTT → Bots
+                                                      ↑
+                                        Browser mic → mlx-qwen3-asr → Transcribed Commands
 ```
 
 ### Hardware
 
-- **Bots**: CyberBrick robots (ESP32-C3, MicroPython, Bambu Lab). Chassis 3D printed on Bambu P1S
+- **Bots**: CyberBrick robots (ESP32-C3, MicroPython, Bambu Lab). ArUco marker on top.
 - **Brain**: Mac Mini M4 Pro, 48GB RAM
-- **Camera**: iPhone held by hand, streaming via Continuity Camera (WiFi/BLE, screen locked)
+- **Camera**: Logitech C270 720p USB webcam, fixed isometric mount (flipped 180° in software)
 
 ### Vision Pipeline
 
-Runs as a background thread inside the FastAPI server. YOLO detection on every frame.
+Runs as a background thread inside the FastAPI server.
 
-- **Input**: iPhone via Continuity Camera (AVFoundation device index 0)
-- **Detection**: Ultralytics YOLO11n on every frame
-- **Output**: Scene state in memory (bots, objects, positions, bounding boxes)
-- **Stream**: WebSocket at `/ws/stream` serves JPEG frames to browser
+- **ArUco**: every frame (<1ms) — bot ID, pixel position, heading, 3D pose
+- **YOLOE-26x**: on-demand via `--objects` flag (~80ms) — 4,585 class detection + tracking
+- **DA-V3 Metric Depth**: on-demand via `--depth` flag (~250ms) — metric depth in meters per object
+- **Stream**: WebSocket at `/ws/stream` serves JPEG frames with ArUco overlay
 
 ### Voice Pipeline
 
-Extracts audio from iPhone mic (Continuity Camera), transcribes with mlx-qwen3-asr.
+Browser-based auto-listen with 1s silence threshold.
 
-- **Input**: iPhone mic via ffmpeg AVFoundation capture
 - **STT**: mlx-qwen3-asr 0.6B (4-bit), ~40ms to transcribe 2s of audio
-- **Output**: Transcribed text commands fed to CC
+- **Input**: Browser MediaRecorder → POST /brain/listen → transcribe → CC
 
 ### Reasoning (Claude Code)
 
-Single long-running `claude-agent-sdk` session. CC drives an observe-think-act loop using the `legion` CLI:
+Starts automatically with the server. CC drives an observe-think-act loop:
 
-1. **Observe**: `legion scene state` / `legion scene describe`
-2. **Think**: Reason about what bots should do
-3. **Act**: `legion move` / `legion stop` / `legion kick`
-4. **Wait**: CC decides interval before next observation
-5. **Repeat**
-
-**Latency budget CC must account for:**
-- Scene state: updated every frame (~33ms)
-- Voice transcription: ~40-100ms
-- MQTT command delivery: ~50ms
-- Total observe-to-act: ~200ms
+1. **Observe**: `legion scene state [--objects] [--depth] [--full]`
+2. **Think**: Reason about positions, headings, depth
+3. **Act**: `legion forward` / `legion left` / `legion right` / `legion kick` / `legion stop`
+4. **Repeat**
 
 ### Communication
 
 - **Broker**: Mosquitto running locally on Mac Mini (`localhost:1883`)
 - **Command topic**: `legion/bot/{id}/command`
-- **Bot firmware action**: `drive` with `{"left": int, "right": int}` per-motor speeds
+- **Bot firmware actions**: `drive` (per-motor speeds), `stop`, `kick`, `kick_stop`
 - **Bot-side MQTT**: `umqtt.simple` (MicroPython)
 
 ### Bot Firmware
@@ -66,16 +58,17 @@ Custom MicroPython on CyberBrick ESP32-C3. Connects WiFi STA → MQTT broker →
 
 - **Actions**: `drive` (per-motor speeds), `stop`, `kick`, `kick_stop`
 - **Motor mapping**: Motor 1 = right wheels (positive = forward), Motor 2 = left wheels (inverted)
-- **Servo**: Raw PWM on GPIO 3 (ServosController conflicts with easypwm from MotorsController)
-- **Upload**: `mpremote` over USB-C, or Arduino Lab for MicroPython
+- **Servo**: Raw PWM on GPIO 3 — duty(127) = kick, duty(76) = stop
+- **Upload**: Arduino Lab for MicroPython over USB-C
 
 ## Tech Stack
 
 - Python 3.12+, managed with `uv` (not pip/venv)
 - FastAPI + uvicorn (web server + API)
-- Ultralytics YOLO11n (object detection)
+- YOLOE-26x (object detection, on-demand)
+- DA-V3 Metric Large (depth estimation, on-demand)
 - mlx-qwen3-asr (speech-to-text, Apple Silicon optimized)
-- OpenCV (`opencv-contrib-python` for camera capture)
+- OpenCV (`opencv-contrib-python` for ArUco + camera)
 - claude-agent-sdk (reasoning)
 - MicroPython (bot firmware)
 - MQTT (Mosquitto broker, umqtt bot-side)
@@ -87,16 +80,16 @@ Custom MicroPython on CyberBrick ESP32-C3. Connects WiFi STA → MQTT broker →
 legion/
 ├── brain/
 │   ├── api/            # FastAPI server + static frontend
-│   │   ├── main.py     # API endpoints, WebSocket stream, vision thread
-│   │   └── static/     # HTML pages (home, control, stream)
-│   ├── vision/         # YOLO detection pipeline
-│   │   ├── detector.py # Camera capture + YOLO inference loop
-│   │   └── state.py    # In-memory scene state + frame buffers
+│   │   ├── main.py     # API endpoints, WebSocket stream, brain startup
+│   │   └── static/     # HTML pages (home, control, command)
+│   ├── vision/         # Vision pipeline
+│   │   ├── detector.py # ArUco (every frame) + YOLOE-26x (on demand)
+│   │   ├── state.py    # In-memory scene state + frame buffers
+│   │   └── depth.py    # DA-V3 metric depth (on demand)
 │   ├── voice/          # Voice command pipeline
 │   │   └── listener.py # Audio capture + mlx-qwen3-asr transcription
 │   ├── reasoning/      # CC brain integration
-│   │   ├── tools.py    # MCP tools (scene, move, stop, kick)
-│   │   └── brain.py    # CC session + async input queue
+│   │   └── brain.py    # CC session + system prompt
 │   └── cli.py          # Typer CLI (legion command)
 ├── firmware/
 │   └── soccerbot/      # CyberBrick MicroPython bot code
@@ -115,48 +108,40 @@ legion serve start --bg         # background
 legion serve stop
 
 # Bot control — all args required
-legion move <bot_id> <angle> <speed> <duration>
-legion kick <bot_id> <duration>
-legion stop <bot_id>
-
-# Vision
-legion vision start [--bg]
-legion vision stop
+legion forward <bot_id> <duration>     # calibrated straight forward
+legion backward <bot_id> <duration>    # calibrated straight backward
+legion left <bot_id> <duration>        # spin left in place
+legion right <bot_id> <duration>       # spin right in place
+legion kick <bot_id> <duration>        # activate front kicker servo
+legion stop <bot_id>                   # emergency stop
 
 # Scene queries (requires server running with vision active)
-legion scene state              # full JSON
-legion scene bots               # bot positions only
-legion scene objects            # detected objects only
-legion scene describe           # human-readable summary
+legion scene state                     # instant — bots only (ArUco)
+legion scene state --objects           # + YOLOE-26x detection (~80ms)
+legion scene state --depth             # + DA-V3 metric depth (~250ms)
+legion scene state --full              # objects + depth (~300ms)
 
-# Voice
-legion listen start [--bg]
-legion listen stop
-
-# Brain (CC reasoning engine)
-legion brain start              # interactive — type commands
-legion brain start --voice      # interactive + voice commands from iPhone mic
+# Snapshot
+legion snapshot                        # save raw frame + depth data
 ```
 
 `legion` is installed globally as an editable uv tool — use `legion` directly, never `uv run legion`.
 
-Angle mapping: 0°=forward, 90°=right, 180°=backward, 270°=left. Uses differential drive math — angle+speed converted to per-motor speeds. All commands auto-stop after duration.
-
 ## Web UI
 
 - **/** — Homepage with links
-- **/control** — Joystick + bot commands
-- **/stream** — Live camera feed with start/stop capture, raw/YOLO toggle
+- **/command** — Command center: video stream + AI brain + voice control
+- **/control** — Joystick manual bot control
 - **/docs** — Auto-generated API docs
 
 ## Bot Calibration
 
-### Bot 1 (SoccerBot)
-- **Straight line drift:** Left motor is stronger. Use L=600, R=1000 to go straight.
-- **90° right turn:** `legion move -- 1 1000 -1000 0.35`
-- **90° left turn:** `legion move -- 1 -1000 1000 0.40`
-- **Servo:** Replaced with 360° servo. Kick works.
-- Surface friction and battery level cause variance.
+### Bot 1 (SoccerBot, ArUco marker #2)
+- **Straight forward**: L=600, R=1000 (left motor stronger)
+- **Turns**: inconsistent due to surface/battery — use small increments (0.1-0.15s) and re-check heading
+- **Heading**: 0°=up, 90°=right, 180°=down, 270°=left (clockwise)
+- **Servo**: 360° replacement working. Kicker on front of bot.
+- **Servo burned out (original)**: Replaced 2026-03-15. Raw PWM, no ServosController.
 
 ## CyberBrick Reference
 
@@ -172,4 +157,4 @@ Primary reference for all CyberBrick firmware work:
 - Use `pathlib.Path` for all file/directory paths
 - When using Claude programmatically, use `claude-agent-sdk`, not the `anthropic` package
 - Use `uv` for Python dependency management. Run `uv sync` to install, `uv run` to execute.
-- Always use `legion` CLI for server/vision/listen management — never raw uvicorn/nohup
+- Always use `legion` CLI for server management — never raw uvicorn/nohup
