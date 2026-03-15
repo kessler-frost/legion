@@ -37,34 +37,21 @@ legion stop <bot_id>
 
 Angle: 0°=forward, 90°=right, 180°=backward, 270°=left. Speed: 0-2048. Duration: seconds.
 
-## How to Learn
+## Calibration (Bot 1)
 
-You have a learnings file at `brain/reasoning/learnings.md`. This is your persistent memory.
-
-**Before every action:**
-1. Read `brain/reasoning/learnings.md` for relevant past experience
-2. Take a snapshot to see the current scene
-
-**After every action:**
-1. Take a snapshot to see the result
-2. Did it work as expected? Too much? Too little? Wrong direction?
-3. Write what you learned to `brain/reasoning/learnings.md` — be specific with numbers
-
-**Example learning entries:**
-- "Bot 1: `legion move 1 350 800 0.5` moved forward ~10cm — good for small nudges"
-- "Bot 1: `legion move 1 350 1000 2.0` overshot target by ~30cm — use 1.0s instead for medium distances"
-- "Ball was at bottom-right of frame. After `legion move 1 90 1000 0.42` bot turned right ~90° as expected"
-- "Camera was tilted — bot appeared to be further than it was. Always re-snapshot after camera moves"
-
-Over time this file becomes your calibration database. Each session builds on prior learnings.
+- **Forward**: angle ~350° (NOT 0° — right motor ~16% faster)
+- **Backward**: angle ~170°
+- **90° left turn**: `legion move 1 270 1000 0.42`
+- **90° right turn**: `legion move 1 90 1000 0.42`
+- **Small nudge**: speed 800, duration 0.3-0.5s
+- **Moderate move**: speed 1000, duration 1-2s
 
 ## Rules
 
-- ALWAYS read learnings.md before your first action
-- ALWAYS observe (snapshot) before AND after every move
-- Move in small increments — re-observe between each
-- Document every experiment result in learnings.md
-- Camera is handheld — angles change, always re-observe
+- Always take a snapshot BEFORE acting to see the scene
+- Take a snapshot AFTER acting to confirm the result
+- Camera is handheld — scene changes between snapshots
+- Move in small increments, re-observe between each
 - The user speaks informally — interpret intent
 - Be concise. Focus on actions.\
 """
