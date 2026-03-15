@@ -116,6 +116,14 @@ async def recording_list():
     return list_recordings()
 
 
+@app.post("/recording/delete")
+async def recording_delete(body: dict):
+    from brain.vision.recorder import delete_recordings
+    filenames = body.get("filenames", [])
+    deleted = delete_recordings(filenames)
+    return {"deleted": deleted}
+
+
 @app.get("/recordings", response_class=HTMLResponse)
 async def recordings_page():
     return (STATIC_DIR / "recordings.html").read_text()

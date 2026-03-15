@@ -55,6 +55,17 @@ def stop_recording() -> None:
     _recording = False
 
 
+def delete_recordings(filenames: list[str]) -> list[str]:
+    """Delete recordings by filename."""
+    deleted = []
+    for name in filenames:
+        path = RECORDINGS_DIR / name
+        if path.exists() and path.parent == RECORDINGS_DIR:
+            path.unlink()
+            deleted.append(name)
+    return deleted
+
+
 def list_recordings() -> list[dict]:
     """List all recordings with metadata."""
     RECORDINGS_DIR.mkdir(exist_ok=True)
