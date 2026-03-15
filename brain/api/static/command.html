@@ -209,7 +209,6 @@
         <div class="wordmark">Legion</div>
         <button class="hbtn" id="btn-capture" onclick="toggleCapture()">start capture</button>
         <button class="hbtn" id="btn-overlay" onclick="toggleOverlay()">overlay: on</button>
-        <button class="hbtn" id="btn-record" onclick="toggleRecord()">record</button>
     </div>
 
     <div class="main">
@@ -278,38 +277,6 @@
             btn.classList.toggle("active", overlayOn);
             if (capturing) connectStream();
         }
-
-        // --- Recording ---
-        const recordBtn = document.getElementById("btn-record");
-        let isRecording = false;
-
-        async function toggleRecord() {
-            if (isRecording) {
-                await fetch("/recording/stop", { method: "POST" });
-                isRecording = false;
-                recordBtn.textContent = "record";
-                recordBtn.classList.remove("active");
-                recordBtn.style.borderColor = "";
-                recordBtn.style.color = "";
-            } else {
-                await fetch("/recording/start", { method: "POST" });
-                isRecording = true;
-                recordBtn.textContent = "stop rec";
-                recordBtn.classList.add("active");
-                recordBtn.style.borderColor = "var(--danger)";
-                recordBtn.style.color = "var(--danger)";
-            }
-        }
-
-        fetch("/recording/status").then(r => r.json()).then(data => {
-            if (data.recording) {
-                isRecording = true;
-                recordBtn.textContent = "stop rec";
-                recordBtn.classList.add("active");
-                recordBtn.style.borderColor = "var(--danger)";
-                recordBtn.style.color = "var(--danger)";
-            }
-        });
 
         // Check if vision is already running
         fetch("/vision/status").then(r => r.json()).then(data => {

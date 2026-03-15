@@ -217,8 +217,5 @@ __marimo__/
 # Model weights
 *.pt
 models/
-
-# Recordings
-recordings/*.mp4
 .DS_Store
 mobileclip2_b.ts
