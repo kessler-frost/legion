@@ -21,9 +21,14 @@ def set_frames(raw_frame, annotated_frame):
         _latest_stream_bytes = jpg.tobytes()
 
 
-def get_frame_bytes() -> bytes:
+def get_frame_bytes(annotated: bool = True) -> bytes:
     with _lock:
-        return _latest_stream_bytes
+        if annotated:
+            return _latest_stream_bytes
+        if _latest_raw_frame is not None:
+            _, jpg = cv2.imencode(".jpg", _latest_raw_frame)
+            return jpg.tobytes()
+        return b""
 
 
 def set_state(state: dict):

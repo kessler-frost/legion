@@ -215,6 +215,7 @@
     <div class="header">
         <div class="wordmark">Legion</div>
         <button class="hbtn" id="btn-capture" onclick="toggleCapture()">start capture</button>
+        <button class="hbtn" id="btn-overlay" onclick="toggleOverlay()">overlay: on</button>
         <button class="hbtn" id="btn-record" onclick="toggleRecord()">record</button>
     </div>
 
@@ -227,13 +228,10 @@
         <div class="chat-panel">
             <div class="messages" id="messages"></div>
             <div class="input-area">
-                <input type="text" id="cmd-input" placeholder="type a command..." autocomplete="off" style="width:100%">
                 <div class="input-buttons">
-                    <button class="send-btn" onclick="sendText()">send</button>
+                    <button class="mic-btn" id="auto-btn" onclick="toggleAutoListen()">auto listen</button>
                     <button class="send-btn" id="stop-btn" onclick="interruptBrain()" style="border-color:var(--danger);color:var(--danger)">stop</button>
                     <button class="send-btn" onclick="clearChat()">clear</button>
-                    <button class="mic-btn" id="mic-btn" onclick="toggleMic()">mic</button>
-                    <button class="mic-btn" id="auto-btn" onclick="toggleAutoListen()">auto</button>
                 </div>
             </div>
         </div>
@@ -243,17 +241,16 @@
         const img = document.getElementById("stream");
         const noFeed = document.getElementById("no-feed");
         const messagesEl = document.getElementById("messages");
-        const cmdInput = document.getElementById("cmd-input");
-        const micBtn = document.getElementById("mic-btn");
         const captureBtn = document.getElementById("btn-capture");
 
         // --- Video stream ---
         let streamWs = null;
         let capturing = false;
+        let overlayOn = true;
 
         function connectStream() {
             if (streamWs) streamWs.close();
-            streamWs = new WebSocket(`ws://${location.host}/ws/stream`);
+            streamWs = new WebSocket(`ws://${location.host}/ws/stream?overlay=${overlayOn}`);
             streamWs.binaryType = "blob";
             streamWs.onmessage = (e) => {
                 const url = URL.createObjectURL(e.data);
@@ -280,6 +277,15 @@
                 captureBtn.classList.add("active");
                 setTimeout(() => connectStream(), 1000);
             }
+        }
+
+        // --- Overlay toggle ---
+        function toggleOverlay() {
+            overlayOn = !overlayOn;
+            const btn = document.getElementById("btn-overlay");
+            btn.textContent = overlayOn ? "overlay: on" : "overlay: off";
+            btn.classList.toggle("active", overlayOn);
+            if (capturing) connectStream();
         }
 
         // --- Recording ---
@@ -384,54 +390,6 @@
         // --- Interrupt ---
         async function interruptBrain() {
             await fetch("/brain/interrupt", { method: "POST" });
-        }
-
-        // --- Text input ---
-        async function sendText() {
-            const text = cmdInput.value.trim();
-            if (!text) return;
-            cmdInput.value = "";
-            await fetch("/brain/send", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text }),
-            });
-        }
-
-        cmdInput.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") sendText();
-        });
-
-        // --- Mic (manual) ---
-        let mediaRecorder = null;
-        let recording = false;
-        let audioChunks = [];
-
-        async function toggleMic() {
-            if (recording) {
-                mediaRecorder.stop();
-                recording = false;
-                micBtn.textContent = "mic";
-                micBtn.classList.remove("recording");
-            } else {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                audioChunks = [];
-
-                mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
-                mediaRecorder.onstop = async () => {
-                    const blob = new Blob(audioChunks, { type: "audio/wav" });
-                    const form = new FormData();
-                    form.append("audio", blob, "recording.wav");
-                    await fetch("/brain/listen", { method: "POST", body: form });
-                    stream.getTracks().forEach(t => t.stop());
-                };
-
-                mediaRecorder.start();
-                recording = true;
-                micBtn.textContent = "stop";
-                micBtn.classList.add("recording");
-            }
         }
 
         // --- Auto-listen (continuous with 3s silence threshold) ---

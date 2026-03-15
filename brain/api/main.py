@@ -147,13 +147,13 @@ async def scene_snapshot():
 # --- Video stream ---
 
 @app.websocket("/ws/stream")
-async def ws_stream(websocket: WebSocket):
+async def ws_stream(websocket: WebSocket, overlay: bool = True):
     from brain.vision.state import get_frame_bytes
 
     await websocket.accept()
     last_data = b""
     while True:
-        data = get_frame_bytes()
+        data = get_frame_bytes(annotated=overlay)
         if data and data != last_data:
             last_data = data
             await websocket.send_bytes(data)
