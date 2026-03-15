@@ -10,6 +10,7 @@
         :root {
             --bg: #050505;
             --surface: #111113;
+            --surface-raised: #19191d;
             --border: #2a2a30;
             --text: #e8e6e3;
             --text-dim: #6b6a6f;
@@ -54,9 +55,6 @@
             letter-spacing: 0.1em;
         }
         a.back:hover { color: var(--accent); }
-        .actions {
-            margin-bottom: 1rem;
-        }
         .btn {
             font-family: 'IBM Plex Mono', monospace;
             font-size: 0.65rem;
@@ -69,53 +67,102 @@
             color: var(--text-dim);
             cursor: pointer;
             transition: all 0.15s ease;
-            margin-right: 0.5rem;
         }
         .btn:hover { border-color: var(--accent); color: var(--text); }
         .btn.danger { border-color: var(--danger); color: var(--danger); }
         .btn.danger:hover { background: var(--danger); color: var(--bg); }
+        .btn.active { border-color: var(--accent); color: var(--accent); }
+
+        .content {
+            display: flex;
+            gap: 2rem;
+            max-width: 1200px;
+        }
+
+        /* Player */
+        .player-section {
+            flex: 1;
+            min-width: 0;
+        }
+        .player-section video {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            background: #000;
+        }
+        .player-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .speed-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--text-dim);
+            margin-right: 0.25rem;
+        }
+        .now-playing {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--accent);
+            margin-top: 0.5rem;
+        }
+
+        /* List */
+        .list-section {
+            width: 360px;
+            min-width: 360px;
+        }
+        .list-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
         .recordings {
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
-            max-width: 800px;
+            gap: 0.4rem;
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
         }
         .rec-item {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1rem;
+            gap: 0.5rem;
+            padding: 0.6rem 0.75rem;
             border: 1px solid var(--border);
             border-radius: 3px;
             background: var(--surface);
             transition: border-color 0.15s;
+            cursor: pointer;
         }
         .rec-item:hover { border-color: var(--accent); }
-        .rec-item.selected { border-color: var(--accent); background: #19191d; }
+        .rec-item.selected { border-color: var(--accent); background: var(--surface-raised); }
+        .rec-item.playing { border-color: var(--accent); }
         .rec-item input[type="checkbox"] {
             accent-color: var(--accent);
             cursor: pointer;
         }
+        .rec-info { flex: 1; min-width: 0; }
         .rec-name {
             font-family: 'IBM Plex Mono', monospace;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: var(--text);
-            flex: 1;
-            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .rec-meta {
             font-family: 'IBM Plex Mono', monospace;
-            font-size: 0.6rem;
+            font-size: 0.55rem;
             color: var(--text-dim);
+            margin-top: 0.2rem;
         }
-        .player {
-            margin-bottom: 2rem;
-            max-width: 800px;
-        }
-        .player video {
-            width: 100%;
-            border: 1px solid var(--border);
-            border-radius: 3px;
+        .rec-actions {
+            display: flex;
+            gap: 0.25rem;
         }
         .empty {
             font-family: 'IBM Plex Mono', monospace;
@@ -130,23 +177,41 @@
         <a class="back" href="/">← home</a>
     </div>
 
-    <div class="player" id="player" style="display:none">
-        <video id="video" controls></video>
-    </div>
+    <div class="content">
+        <div class="player-section">
+            <video id="video" controls></video>
+            <div class="player-controls">
+                <span class="speed-label">speed:</span>
+                <button class="btn" onclick="setSpeed(0.5)">0.5x</button>
+                <button class="btn active" onclick="setSpeed(1)">1x</button>
+                <button class="btn" onclick="setSpeed(1.5)">1.5x</button>
+                <button class="btn" onclick="setSpeed(2)">2x</button>
+                <button class="btn" onclick="setSpeed(4)">4x</button>
+            </div>
+            <div class="now-playing" id="now-playing"></div>
+        </div>
 
-    <div class="actions" id="actions" style="display:none">
-        <button class="btn" onclick="selectAll()">select all</button>
-        <button class="btn" onclick="selectNone()">select none</button>
-        <button class="btn danger" onclick="deleteSelected()">delete selected</button>
+        <div class="list-section">
+            <div class="list-actions">
+                <button class="btn" onclick="selectAll()">all</button>
+                <button class="btn" onclick="selectNone()">none</button>
+                <button class="btn danger" onclick="deleteSelected()">delete</button>
+            </div>
+            <div class="recordings" id="list"></div>
+        </div>
     </div>
-
-    <div class="recordings" id="list"></div>
 
     <script>
-        const listEl = document.getElementById("list");
-        const playerEl = document.getElementById("player");
         const videoEl = document.getElementById("video");
-        const actionsEl = document.getElementById("actions");
+        const listEl = document.getElementById("list");
+        const nowPlaying = document.getElementById("now-playing");
+        let currentFile = null;
+
+        function setSpeed(s) {
+            videoEl.playbackRate = s;
+            document.querySelectorAll(".player-controls .btn").forEach(b => b.classList.remove("active"));
+            event.target.classList.add("active");
+        }
 
         async function loadRecordings() {
             const recs = await fetch("/recording/list").then(r => r.json());
@@ -154,39 +219,55 @@
 
             if (recs.length === 0) {
                 listEl.innerHTML = '<div class="empty">no recordings yet</div>';
-                actionsEl.style.display = "none";
                 return;
             }
-
-            actionsEl.style.display = "block";
 
             recs.forEach(rec => {
                 const div = document.createElement("div");
                 div.className = "rec-item";
-                div.dataset.filename = rec.filename;
 
                 const date = new Date(rec.created * 1000);
                 const dateStr = date.toLocaleString();
 
                 div.innerHTML = `
-                    <input type="checkbox" data-file="${rec.filename}">
-                    <div class="rec-name" onclick="playRecording('${rec.filename}')">${rec.filename}</div>
-                    <div class="rec-meta">${rec.size_mb} MB · ${dateStr}</div>
+                    <input type="checkbox" data-file="${rec.filename}" onclick="event.stopPropagation()">
+                    <div class="rec-info" onclick="playRecording('${rec.filename}')">
+                        <div class="rec-name">${rec.filename}</div>
+                        <div class="rec-meta">${rec.size_mb} MB · ${dateStr}</div>
+                    </div>
+                    <div class="rec-actions">
+                        <button class="btn" onclick="event.stopPropagation(); createSpeedup('${rec.filename}', 2)" title="Create 2x version">2x</button>
+                    </div>
                 `;
 
                 const cb = div.querySelector("input");
-                cb.addEventListener("change", () => {
-                    div.classList.toggle("selected", cb.checked);
-                });
+                cb.addEventListener("change", () => div.classList.toggle("selected", cb.checked));
 
                 listEl.appendChild(div);
             });
         }
 
         function playRecording(filename) {
+            document.querySelectorAll(".rec-item").forEach(r => r.classList.remove("playing"));
+            event?.target?.closest?.(".rec-item")?.classList?.add("playing");
             videoEl.src = `/rec/${filename}`;
-            playerEl.style.display = "block";
             videoEl.play();
+            currentFile = filename;
+            nowPlaying.textContent = filename;
+        }
+
+        async function createSpeedup(filename, speed) {
+            const btn = event.target;
+            btn.textContent = "...";
+            btn.disabled = true;
+            await fetch("/recording/speedup", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ filename, speed }),
+            });
+            btn.textContent = "2x";
+            btn.disabled = false;
+            loadRecordings();
         }
 
         function selectAll() {
@@ -212,8 +293,11 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ filenames }),
             });
-            videoEl.pause();
-            playerEl.style.display = "none";
+            if (filenames.includes(currentFile)) {
+                videoEl.pause();
+                videoEl.src = "";
+                nowPlaying.textContent = "";
+            }
             loadRecordings();
         }
 

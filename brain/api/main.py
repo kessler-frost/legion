@@ -116,6 +116,15 @@ async def recording_list():
     return list_recordings()
 
 
+@app.post("/recording/speedup")
+async def recording_speedup(body: dict):
+    from brain.vision.recorder import speed_up_recording
+    filename = body.get("filename", "")
+    speed = body.get("speed", 2.0)
+    out = await asyncio.to_thread(speed_up_recording, filename, speed)
+    return {"status": "done", "filename": out}
+
+
 @app.post("/recording/delete")
 async def recording_delete(body: dict):
     from brain.vision.recorder import delete_recordings
