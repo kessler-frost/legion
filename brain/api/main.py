@@ -93,9 +93,8 @@ async def scene_state():
 
 @app.get("/scene/snapshot")
 async def scene_snapshot():
-    from brain.vision.state import save_snapshot
-    path = save_snapshot()
-    return {"path": str(path)}
+    from brain.vision.state import get_snapshot_with_depth
+    return await asyncio.to_thread(get_snapshot_with_depth)
 
 
 # --- Video stream ---

@@ -197,11 +197,11 @@ def scene_state():
 
 @app.command()
 def snapshot():
-    """Capture a camera frame and print the file path. Use the Read tool to view it."""
+    """Capture a camera frame with depth analysis. Returns file path + depth at key points."""
     import urllib.request
     resp = urllib.request.urlopen(f"{API_BASE}/scene/snapshot")
     data = json.loads(resp.read())
-    typer.echo(data.get("path", "failed"))
+    typer.echo(json.dumps(data, indent=2))
 
 
 # ---------------------------------------------------------------------------

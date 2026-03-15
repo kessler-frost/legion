@@ -1,4 +1,6 @@
-import json
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 import threading
 import time
 from pathlib import Path
@@ -51,3 +53,33 @@ def save_snapshot() -> Path:
         if _latest_raw_frame is not None:
             cv2.imwrite(str(path), _latest_raw_frame)
     return path
+
+
+def get_snapshot_with_depth() -> dict:
+    """Save snapshot + run DA3 depth on it. Returns path + depth info."""
+    path = save_snapshot()
+
+    with _lock:
+        frame = _latest_raw_frame.copy() if _latest_raw_frame is not None else None
+        state = _latest_state.copy()
+
+    if frame is None:
+        return {"path": str(path), "depth": None}
+
+    from brain.vision.depth import get_depth_at_points
+
+    # Collect points to sample: all bot positions + frame center
+    points = []
+    h, w = frame.shape[:2]
+    points.append((w // 2, h // 2))  # center
+
+    for bot in state.get("bots", []):
+        px, py = bot["position_px"]
+        points.append((px, py))
+
+    depth_info = get_depth_at_points(frame, points)
+
+    return {
+        "path": str(path),
+        "depth": depth_info,
+    }
