@@ -77,23 +77,59 @@ def serve_stop():
     typer.echo("all legion processes stopped")
 
 
-@app.command()
-def move(
-    bot_id: int = typer.Argument(help="Bot ID"),
-    left: int = typer.Argument(help="Left motor speed (-2048 to 2048, positive=forward)"),
-    right: int = typer.Argument(help="Right motor speed (-2048 to 2048, positive=forward)"),
-    duration: float = typer.Argument(help="Duration in seconds"),
-):
-    """Move a bot by setting left and right motor speeds directly."""
-    left = max(-MAX_SPEED, min(MAX_SPEED, left))
-    right = max(-MAX_SPEED, min(MAX_SPEED, right))
-    topic = f"legion/bot/{bot_id}/command"
+# Calibrated motor speeds per bot
+BOT_CALIBRATION = {
+    1: {"forward": (600, 1000), "backward": (-600, -1000)},
+}
+DEFAULT_TURN_SPEED = 1000
 
+
+def _drive(bot_id: int, left: int, right: int, duration: float):
+    topic = f"legion/bot/{bot_id}/command"
     typer.echo(f"bot {bot_id}: L={left} R={right} for {duration}s")
     publish(topic, {"action": "drive", "params": {"left": left, "right": right}})
     time.sleep(duration)
     publish(topic, {"action": "stop", "params": {}})
-    typer.echo(f"bot {bot_id}: stopped")
+
+
+@app.command()
+def forward(
+    bot_id: int = typer.Argument(help="Bot ID"),
+    duration: float = typer.Argument(help="Duration in seconds"),
+):
+    """Drive forward (calibrated straight line)."""
+    cal = BOT_CALIBRATION.get(bot_id, {"forward": (1000, 1000)})
+    l, r = cal["forward"]
+    _drive(bot_id, l, r, duration)
+
+
+@app.command()
+def backward(
+    bot_id: int = typer.Argument(help="Bot ID"),
+    duration: float = typer.Argument(help="Duration in seconds"),
+):
+    """Drive backward (calibrated straight line)."""
+    cal = BOT_CALIBRATION.get(bot_id, {"backward": (-1000, -1000)})
+    l, r = cal["backward"]
+    _drive(bot_id, l, r, duration)
+
+
+@app.command()
+def left(
+    bot_id: int = typer.Argument(help="Bot ID"),
+    duration: float = typer.Argument(help="Duration in seconds (0.40s = 90°)"),
+):
+    """Spin left in place."""
+    _drive(bot_id, -DEFAULT_TURN_SPEED, DEFAULT_TURN_SPEED, duration)
+
+
+@app.command()
+def right(
+    bot_id: int = typer.Argument(help="Bot ID"),
+    duration: float = typer.Argument(help="Duration in seconds (0.35s = 90°)"),
+):
+    """Spin right in place."""
+    _drive(bot_id, DEFAULT_TURN_SPEED, -DEFAULT_TURN_SPEED, duration)
 
 
 @app.command()
@@ -101,21 +137,19 @@ def kick(
     bot_id: int = typer.Argument(help="Bot ID"),
     duration: float = typer.Argument(help="Duration in seconds"),
 ):
-    """Kick for a duration."""
+    """Activate front kicker servo."""
     topic = f"legion/bot/{bot_id}/command"
-
     typer.echo(f"bot {bot_id}: kick for {duration}s")
     publish(topic, {"action": "kick", "params": {}})
     time.sleep(duration)
     publish(topic, {"action": "kick_stop", "params": {}})
-    typer.echo(f"bot {bot_id}: kick stopped")
 
 
 @app.command()
 def stop(
     bot_id: int = typer.Argument(help="Bot ID"),
 ):
-    """Emergency stop a bot."""
+    """Emergency stop."""
     topic = f"legion/bot/{bot_id}/command"
     publish(topic, {"action": "stop", "params": {}})
     typer.echo(f"bot {bot_id}: stopped")

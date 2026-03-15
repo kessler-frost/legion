@@ -45,49 +45,42 @@ Use scene state for precise bot positions/headings. Use snapshot to see the scen
 ## How to Act
 
 ```
-legion move <bot_id> <left_speed> <right_speed> <duration>
-legion stop <bot_id>
-legion kick <bot_id> <duration>
+legion forward <bot_id> <duration>     # drive straight forward
+legion backward <bot_id> <duration>    # drive straight backward
+legion left <bot_id> <duration>        # spin left in place (0.40s = 90°)
+legion right <bot_id> <duration>       # spin right in place (0.35s = 90°)
+legion kick <bot_id> <duration>        # activate front kicker (0.5-1.0s typical)
+legion stop <bot_id>                   # emergency stop
 ```
 
-**Kick**: activates the 360° servo mounted on the FRONT of the bot. To kick an object, face the bot toward it first, then kick. Duration 0.5-1.0s is typical.
+All motor speeds are pre-calibrated. Just pick direction + duration.
 
-Direct motor control. Left and right motor speeds from -2048 to 2048. Positive = forward, negative = backward. Duration in seconds — bot auto-stops after.
+**Kick**: the kicker servo is on the FRONT of the bot. Face the target first, then kick.
 
-**Examples:**
-- **Forward**: `legion move 1 1000 1000 1.0` (both motors forward)
-- **Backward**: `legion move 1 -1000 -1000 1.0`
-- **Spin right**: `legion move 1 1000 -1000 0.42` (left forward, right backward)
-- **Spin left**: `legion move 1 -1000 1000 0.42`
-- **Curve right**: `legion move 1 1000 500 1.0` (left faster than right)
-- **Curve left**: `legion move 1 500 1000 1.0` (right faster than left)
+## Duration Guide (tested)
 
-## Calibration (Bot 1, ArUco marker ID 2)
+**Forward/backward:**
+- 0.3s → ~5cm
+- 0.5s → ~10cm
+- 1.0s → ~15-20cm
+- 2.0s → ~30-40cm
 
-**Motor imbalance**: Left motor is stronger. Ratio for straight line: left=600, right=1000.
-- **Straight forward**: `legion move 1 600 1000 <duration>`
-- **Straight backward**: `legion move -- 1 -600 -1000 <duration>`
+**Turns:**
+- 90° right: `legion right 1 0.35`
+- 90° left: `legion left 1 0.40`
+- 45°: halve the duration
+- 180°: double the duration
 
-**Turns** (at speed 1000):
-- **90° right**: `legion move -- 1 1000 -1000 0.35`
-- **90° left**: `legion move -- 1 -1000 1000 0.40`
+## How to Navigate to a Target
 
-Note: use `--` before negative speeds so they aren't parsed as flags.
-
-**Speed guide** (tested):
-- **Tiny nudge**: speed ~800, 0.3s → ~5cm
-- **Small move**: speed ~1000, 0.5s → ~10cm
-- **Moderate move**: speed ~1000, 1.0s → ~15-20cm
-- **Large move**: speed ~1000, 2.0s → ~30-40cm
-
-**To navigate to a target**:
 1. Take snapshot — get depth_m of bot and target
-2. Turn to face the target (compare pixel positions, account for perspective)
-3. Drive forward — use depth difference to estimate distance, not pixel distance
-4. Re-observe after EVERY move — check depth values
-5. Bot and target are only close when their depth_m values are within ~0.02m
-6. If depth values still differ by >0.03m, keep driving — you're not there yet
-7. Only kick when depth values match AND pixel positions are close
+2. Compare depth values to judge real distance (NOT pixel distance)
+3. Turn to face the target using `legion left` or `legion right`
+4. Drive forward with `legion forward`
+5. Re-observe after EVERY move
+6. Bot and target are only close when their depth_m values are within ~0.02m
+7. If depth values still differ by >0.03m, keep driving — you're not there yet
+8. Only kick when depth values match AND pixel positions are close
 
 ## Rules
 
