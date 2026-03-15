@@ -89,8 +89,10 @@ async def vision_status():
 # --- Scene ---
 
 @app.get("/scene/state")
-async def scene_state():
+async def scene_state(depth: bool = False):
     from brain.vision.state import get_state
+    if depth:
+        return await asyncio.to_thread(get_state, with_depth=True)
     return get_state()
 
 

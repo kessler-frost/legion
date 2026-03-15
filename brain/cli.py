@@ -206,10 +206,15 @@ API_BASE = "http://localhost:8000"
 
 
 @scene_app.command("state")
-def scene_state():
-    """Full scene state as JSON: bots (ID, position, heading), objects, distances."""
+def scene_state(
+    depth: bool = typer.Option(False, "--depth", help="Include DA-V3 metric depth (~0.25s extra)"),
+):
+    """Full scene state as JSON: bots, objects, distances. Use --depth for metric depth."""
     import urllib.request
-    resp = urllib.request.urlopen(f"{API_BASE}/scene/state")
+    url = f"{API_BASE}/scene/state"
+    if depth:
+        url += "?depth=true"
+    resp = urllib.request.urlopen(url)
     typer.echo(json.dumps(json.loads(resp.read()), indent=2))
 
 

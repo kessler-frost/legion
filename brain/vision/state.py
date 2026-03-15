@@ -40,9 +40,38 @@ def set_state(state: dict):
         _latest_state = state
 
 
-def get_state() -> dict:
+def get_state(with_depth: bool = False) -> dict:
     with _lock:
-        return _latest_state.copy()
+        state = _latest_state.copy()
+        frame = _latest_raw_frame.copy() if _latest_raw_frame is not None else None
+
+    if with_depth and frame is not None:
+        try:
+            from brain.vision.depth import get_depth_at_points
+
+            points = []
+            for bot in state.get("bots", []):
+                points.append(tuple(bot["position_px"]))
+            for obj in state.get("objects", []):
+                points.append(tuple(obj["position_px"]))
+
+            if points:
+                depth_info = get_depth_at_points(frame, points)
+
+                # Attach depth to each bot and object
+                idx = 0
+                for bot in state.get("bots", []):
+                    bot["depth_m"] = depth_info["points"][idx]["depth_m"]
+                    idx += 1
+                for obj in state.get("objects", []):
+                    obj["depth_m"] = depth_info["points"][idx]["depth_m"]
+                    idx += 1
+
+                state["depth_range_m"] = depth_info["depth_range_m"]
+        except Exception as e:
+            print(f"Depth failed: {e}")
+
+    return state
 
 
 def save_snapshot() -> Path:
