@@ -76,8 +76,8 @@ def _annotate(frame, bots):
         px, py = bot["position_px"]
         heading = bot["heading_deg"]
         rad = math.radians(heading)
-        ax = int(px + 50 * math.cos(rad))
-        ay = int(py - 50 * math.sin(rad))
+        ax = int(px + 50 * math.sin(rad))
+        ay = int(py - 50 * math.cos(rad))
 
         cv2.arrowedLine(annotated, (px, py), (ax, ay), (0, 255, 0), 2, tipLength=0.3)
         cv2.putText(annotated, f"Bot {bot['id']}", (px - 20, py - 25),
