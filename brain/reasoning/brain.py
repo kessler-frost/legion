@@ -40,7 +40,10 @@ Use scene state for precise bot positions/headings. Use snapshot to see the scen
 ```
 legion move <bot_id> <left_speed> <right_speed> <duration>
 legion stop <bot_id>
+legion kick <bot_id> <duration>
 ```
+
+**Kick**: activates the 360° servo to push/hit objects. Duration 0.5-1.0s is typical.
 
 Direct motor control. Left and right motor speeds from -2048 to 2048. Positive = forward, negative = backward. Duration in seconds — bot auto-stops after.
 
