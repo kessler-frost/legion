@@ -5,7 +5,7 @@ import time
 import cv2
 import numpy as np
 
-from brain.vision.state import set_raw_frame, set_state
+from brain.vision.state import set_frames, set_state
 
 DEFAULT_SOURCE = 0
 
@@ -106,7 +106,7 @@ def _vision_loop(source):
         set_state(state)
 
         annotated = _annotate(frame, bots)
-        set_raw_frame(annotated)
+        set_frames(frame, annotated)
 
     cap.release()
     print("Vision stopped")
