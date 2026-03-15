@@ -65,11 +65,11 @@ All motor speeds are pre-calibrated. Just pick direction + duration.
 - 1.0s → ~15-20cm
 - 2.0s → ~30-40cm
 
-**Turns:**
-- 90° right: `legion right 1 0.35`
-- 90° left: `legion left 1 0.40`
-- 45°: halve the duration
-- 180°: double the duration
+**Turns — IMPORTANT: turn rate is inconsistent due to surface friction and battery.**
+- Do NOT try to turn exact angles in one command
+- Instead, turn in small increments (0.1-0.15s) and re-check heading after each
+- Example: to turn 90° left, do `legion left 1 0.1`, check heading, repeat until close
+- Right turns are slightly faster than left turns
 
 ## How to Navigate to a Target
 
