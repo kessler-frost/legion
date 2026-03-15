@@ -181,7 +181,18 @@ def vision_stop():
 # Scene
 # ---------------------------------------------------------------------------
 
+scene_app = typer.Typer(no_args_is_help=True, help="Query the current scene — bot positions, objects, distances.")
+app.add_typer(scene_app, name="scene")
+
 API_BASE = "http://localhost:8000"
+
+
+@scene_app.command("state")
+def scene_state():
+    """Full scene state as JSON: bots (ID, position, heading), objects, distances."""
+    import urllib.request
+    resp = urllib.request.urlopen(f"{API_BASE}/scene/state")
+    typer.echo(json.dumps(json.loads(resp.read()), indent=2))
 
 
 @app.command()

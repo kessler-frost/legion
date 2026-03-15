@@ -82,6 +82,12 @@ async def vision_status():
     return {"running": running}
 
 
+@app.get("/scene/state")
+async def scene_state():
+    from brain.vision.state import get_state
+    return get_state()
+
+
 @app.get("/scene/snapshot")
 async def scene_snapshot():
     from brain.vision.state import save_snapshot
