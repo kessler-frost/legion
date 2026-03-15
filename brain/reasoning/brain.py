@@ -63,10 +63,11 @@ The angle uses differential drive math:
 - **45° turn**: ~0.21s at speed 1000
 - **180° turn**: ~0.84s at speed 1000
 
-**Speed guide**:
-- **Gentle nudge**: speed 600-800, duration 0.3-0.5s (~5-10cm)
-- **Moderate move**: speed 1000, duration 1-2s (~20-40cm)
-- **Fast move**: speed 1500, duration 1-2s (~40-80cm)
+**Speed guide** (tested):
+- **Tiny nudge**: speed 800, 0.3s → ~5cm
+- **Small move**: speed 1000, 0.5s → ~10cm
+- **Moderate move**: speed 1000, 1.0s → ~15-20cm
+- **Large move**: speed 1000, 2.0s → ~30-40cm
 
 **To navigate to a target**: First turn to face it (calculate angle difference from current heading), then drive forward. Always re-observe between turn and drive.
 
