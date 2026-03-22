@@ -26,8 +26,8 @@ CAMERA_MATRIX = np.array([
 DIST_COEFFS = np.zeros(5, dtype=np.float64)
 MARKER_SIZE = 0.04
 
-MARKER_TO_BOT = {2: 1, 1: 2}
-MARKER_HEADING_OFFSET = {1: 0.0, 2: 2.1}  # keyed by ArUco marker ID
+MARKER_TO_BOT = {2: 1, 3: 2}
+MARKER_HEADING_OFFSET = {2: 2.1, 3: 0.0}  # keyed by ArUco marker ID
 
 _stop_event = threading.Event()
 _yolo_model = None
@@ -124,7 +124,10 @@ def _annotate(frame, bots):
         rad = math.radians(heading)
         ax = int(px + 50 * math.sin(rad))
         ay = int(py - 50 * math.cos(rad))
+        cv2.arrowedLine(annotated, (px, py), (ax, ay), (0, 0, 0), 4, tipLength=0.3)
         cv2.arrowedLine(annotated, (px, py), (ax, ay), (0, 255, 0), 2, tipLength=0.3)
+        cv2.putText(annotated, f"Bot {bot['id']}", (px - 20, py - 25),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 3)
         cv2.putText(annotated, f"Bot {bot['id']}", (px - 20, py - 25),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
     return annotated

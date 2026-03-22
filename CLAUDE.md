@@ -148,7 +148,7 @@ legion snapshot                        # save raw frame + depth data
 - **Servo**: 360° replacement working. Kicker on front of bot.
 - **Servo burned out (original)**: Replaced 2026-03-15. Raw PWM, no ServosController.
 
-### Bot 2 (Tank, ArUco marker #1)
+### Bot 2 (Tank, ArUco marker #3)
 - **Drive**: tracks, differential steering
 - **Straight forward**: L=-1000, R=-1000 (motors inverted vs SoccerBot)
 - **Turns**: tracks may turn more consistently than wheels — still use small increments
