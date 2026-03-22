@@ -80,6 +80,7 @@ def serve_stop():
 # Calibrated motor speeds per bot
 BOT_CALIBRATION = {
     1: {"forward": (600, 1000), "backward": (-600, -1000)},
+    2: {"forward": (1000, 1000), "backward": (-1000, -1000)},
 }
 DEFAULT_TURN_SPEED = 1000
 
@@ -143,6 +144,19 @@ def kick(
     publish(topic, {"action": "kick", "params": {}})
     time.sleep(duration)
     publish(topic, {"action": "kick_stop", "params": {}})
+
+
+@app.command()
+def shoot(
+    bot_id: int = typer.Argument(help="Bot ID"),
+    duration: float = typer.Argument(help="Duration in seconds"),
+):
+    """Activate flywheel shooter servo."""
+    topic = f"legion/bot/{bot_id}/command"
+    typer.echo(f"bot {bot_id}: shoot for {duration}s")
+    publish(topic, {"action": "shoot", "params": {}})
+    time.sleep(duration)
+    publish(topic, {"action": "shoot_stop", "params": {}})
 
 
 @app.command()

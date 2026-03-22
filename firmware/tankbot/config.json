@@ -1,0 +1,7 @@
+{
+    "wifi_ssid": "YOUR_SSID",
+    "wifi_password": "YOUR_PASSWORD",
+    "mqtt_broker": "192.168.X.X",
+    "mqtt_port": 1883,
+    "bot_id": 2
+}

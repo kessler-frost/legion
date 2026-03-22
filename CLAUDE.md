@@ -92,7 +92,11 @@ legion/
 │   │   └── brain.py    # CC session + system prompt
 │   └── cli.py          # Typer CLI (legion command)
 ├── firmware/
-│   └── soccerbot/      # CyberBrick MicroPython bot code
+│   ├── soccerbot/      # Bot 1: CyberBrick SoccerBot (wheels + kicker)
+│   │   ├── boot.py     # Custom boot (skips RC stack)
+│   │   ├── main.py     # WiFi + MQTT + motor control
+│   │   └── config.json # WiFi creds + broker IP
+│   └── tankbot/        # Bot 2: CyberBrick Tank (tracks + shooter)
 │       ├── boot.py     # Custom boot (skips RC stack)
 │       ├── main.py     # WiFi + MQTT + motor control
 │       └── config.json # WiFi creds + broker IP
@@ -112,7 +116,8 @@ legion forward <bot_id> <duration>     # calibrated straight forward
 legion backward <bot_id> <duration>    # calibrated straight backward
 legion left <bot_id> <duration>        # spin left in place
 legion right <bot_id> <duration>       # spin right in place
-legion kick <bot_id> <duration>        # activate front kicker servo
+legion kick <bot_id> <duration>        # activate front kicker servo (Bot 1)
+legion shoot <bot_id> <duration>       # activate flywheel shooter (Bot 2)
 legion stop <bot_id>                   # emergency stop
 
 # Scene queries (requires server running with vision active)
@@ -142,6 +147,13 @@ legion snapshot                        # save raw frame + depth data
 - **Heading**: 0°=up, 90°=right, 180°=down, 270°=left (clockwise)
 - **Servo**: 360° replacement working. Kicker on front of bot.
 - **Servo burned out (original)**: Replaced 2026-03-15. Raw PWM, no ServosController.
+
+### Bot 2 (Tank, ArUco marker #1)
+- **Drive**: tracks, differential steering
+- **Straight forward**: L=1000, R=1000 (placeholder — calibrate after first test)
+- **Turns**: tracks may turn more consistently than wheels — still use small increments
+- **Heading**: same convention as Bot 1 (0°=up, 90°=right, clockwise)
+- **Servo**: 360° on S1 (GPIO 3). Flywheel shooter on front. duty(127) = shoot, duty(76) = stop.
 
 ## CyberBrick Reference
 

@@ -49,13 +49,16 @@ legion forward <bot_id> <duration>     # drive straight forward
 legion backward <bot_id> <duration>    # drive straight backward
 legion left <bot_id> <duration>        # spin left in place (0.40s = 90°)
 legion right <bot_id> <duration>       # spin right in place (0.35s = 90°)
-legion kick <bot_id> <duration>        # activate front kicker (0.5-1.0s typical)
+legion kick <bot_id> <duration>        # activate front kicker (Bot 1 only)
+legion shoot <bot_id> <duration>       # activate flywheel shooter (Bot 2 only)
 legion stop <bot_id>                   # emergency stop
 ```
 
 All motor speeds are pre-calibrated. Just pick direction + duration.
 
-**Kick**: the kicker servo is on the FRONT of the bot. Face the target first, then kick.
+**Kick** (Bot 1 only): the kicker servo is on the FRONT of Bot 1. Face the target first, then kick.
+
+**Shoot** (Bot 2 only): the shooter is on the FRONT of Bot 2 (the tank). Face the target, then shoot. Uses flywheel launcher — fires 14mm plastic balls.
 
 ## Duration Guide (tested)
 
@@ -95,6 +98,14 @@ All motor speeds are pre-calibrated. Just pick direction + duration.
 - Do NOT kick without facing the target — turn first
 - Do NOT trust pixel distance alone — always check depth_m
 - Do NOT make large moves (>0.5s) near a target — use 0.2-0.3s nudges
+
+## Bot Reference
+
+**Bot 1 (SoccerBot)**: wheels, kicker servo → use `legion kick`
+**Bot 2 (Tank)**: tracks, flywheel shooter → use `legion shoot`
+
+Both bots use the same movement commands (forward/backward/left/right/stop).
+Tank turns may behave differently than SoccerBot due to tracks — use the same small-increment approach.
 
 ## Rules
 

@@ -26,8 +26,8 @@ CAMERA_MATRIX = np.array([
 DIST_COEFFS = np.zeros(5, dtype=np.float64)
 MARKER_SIZE = 0.04
 
-MARKER_TO_BOT = {2: 1}
-HEADING_OFFSET = 2.1
+MARKER_TO_BOT = {2: 1, 1: 2}
+MARKER_HEADING_OFFSET = {1: 0.0, 2: 2.1}  # keyed by ArUco marker ID
 
 _stop_event = threading.Event()
 _yolo_model = None
@@ -57,7 +57,8 @@ def _detect_aruco(frame):
         dx = c[1][0] - c[0][0]
         dy = c[1][1] - c[0][1]
         raw_heading = math.degrees(math.atan2(-dy, dx))
-        heading = (360 - raw_heading + HEADING_OFFSET) % 360
+        offset = MARKER_HEADING_OFFSET.get(int(marker_id), 0.0)
+        heading = (360 - raw_heading + offset) % 360
 
         bot_id = MARKER_TO_BOT.get(int(marker_id), int(marker_id))
 
