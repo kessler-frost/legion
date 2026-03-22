@@ -80,7 +80,7 @@ def serve_stop():
 # Calibrated motor speeds per bot
 BOT_CALIBRATION = {
     1: {"forward": (600, 1000), "backward": (-600, -1000)},
-    2: {"forward": (1000, 1000), "backward": (-1000, -1000)},
+    2: {"forward": (-1000, -1000), "backward": (1000, 1000)},
 }
 DEFAULT_TURN_SPEED = 1000
 

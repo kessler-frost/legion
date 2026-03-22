@@ -150,10 +150,11 @@ legion snapshot                        # save raw frame + depth data
 
 ### Bot 2 (Tank, ArUco marker #1)
 - **Drive**: tracks, differential steering
-- **Straight forward**: L=1000, R=1000 (placeholder — calibrate after first test)
+- **Straight forward**: L=-1000, R=-1000 (motors inverted vs SoccerBot)
 - **Turns**: tracks may turn more consistently than wheels — still use small increments
 - **Heading**: same convention as Bot 1 (0°=up, 90°=right, clockwise)
 - **Servo**: 360° on S1 (GPIO 3). Flywheel shooter on front. duty(127) = shoot, duty(76) = stop.
+- **Shooter**: ~2s = 1 ball fired
 
 ## CyberBrick Reference
 
