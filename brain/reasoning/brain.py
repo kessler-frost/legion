@@ -109,6 +109,7 @@ Tank turns may behave differently than SoccerBot due to tracks — use the same 
 
 ## Rules
 
+- ONLY use `legion scene state` to observe — NEVER use `legion snapshot`
 - Always `legion scene state` BEFORE acting
 - Re-observe AFTER acting to confirm the result
 - Camera is fixed — positions are consistent between observations

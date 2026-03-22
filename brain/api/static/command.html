@@ -85,6 +85,31 @@
             overflow: hidden;
         }
 
+        /* Collapse toggle */
+        .collapse-btn {
+            position: absolute;
+            top: 50%;
+            right: 520px;
+            transform: translateY(-50%);
+            z-index: 10;
+            width: 20px;
+            height: 48px;
+            border: 1px solid var(--border);
+            border-right: none;
+            border-radius: 3px 0 0 3px;
+            background: var(--surface);
+            color: var(--text-dim);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            transition: all 0.2s ease;
+        }
+        .collapse-btn:hover { border-color: var(--accent); color: var(--text); }
+        .main.collapsed .collapse-btn { right: 0; }
+        .main.collapsed .chat-panel { display: none; }
+
         /* Video panel */
         .video-panel {
             flex: 1;
@@ -211,11 +236,13 @@
         <button class="hbtn" id="btn-overlay" onclick="toggleOverlay()">overlay: on</button>
     </div>
 
-    <div class="main">
+    <div class="main" id="main">
         <div class="video-panel">
             <img id="stream" style="display:none" alt="stream">
             <div class="no-feed" id="no-feed">no feed — click start capture</div>
         </div>
+
+        <button class="collapse-btn" id="collapse-btn" onclick="toggleSidebar()">&rsaquo;</button>
 
         <div class="chat-panel">
             <div class="messages" id="messages"></div>
@@ -228,6 +255,14 @@
     </div>
 
     <script>
+        // --- Sidebar collapse ---
+        function toggleSidebar() {
+            const main = document.getElementById("main");
+            const btn = document.getElementById("collapse-btn");
+            main.classList.toggle("collapsed");
+            btn.innerHTML = main.classList.contains("collapsed") ? "&lsaquo;" : "&rsaquo;";
+        }
+
         const img = document.getElementById("stream");
         const noFeed = document.getElementById("no-feed");
         const messagesEl = document.getElementById("messages");
