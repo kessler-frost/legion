@@ -1,9 +1,13 @@
+import json
 import math
 import threading
 import time
+from pathlib import Path
 
 import cv2
 import numpy as np
+import onnxruntime as ort
+import supervision as sv
 
 from brain.vision.state import set_frames, set_state
 
@@ -30,7 +34,14 @@ MARKER_TO_BOT = {2: 1, 3: 2}
 MARKER_HEADING_OFFSET = {2: 2.1, 3: 0.0}  # keyed by ArUco marker ID
 
 _stop_event = threading.Event()
-_yolo_model = None
+_onnx_session = None
+_class_names = None
+_tracker = None
+
+_MODEL_DIR = Path(__file__).resolve().parent.parent.parent
+_ONNX_PATH = _MODEL_DIR / "yoloe-26x-seg-pf.onnx"
+_NAMES_PATH = _MODEL_DIR / "yoloe-26x-seg-pf-names.json"
+_INPUT_SIZE = 640
 
 
 def request_stop():
@@ -78,38 +89,84 @@ def _detect_aruco(frame):
     return bots
 
 
+def _letterbox(frame):
+    """Resize frame to _INPUT_SIZE with letterbox padding, return padded image and transform params."""
+    h, w = frame.shape[:2]
+    scale = min(_INPUT_SIZE / w, _INPUT_SIZE / h)
+    nw, nh = int(w * scale), int(h * scale)
+    resized = cv2.resize(frame, (nw, nh))
+    padded = np.full((_INPUT_SIZE, _INPUT_SIZE, 3), 114, dtype=np.uint8)
+    dx, dy = (_INPUT_SIZE - nw) // 2, (_INPUT_SIZE - nh) // 2
+    padded[dy:dy + nh, dx:dx + nw] = resized
+    return padded, scale, dx, dy
+
+
 def detect_objects_on_demand(frame):
-    """Run YOLOE-26x on a frame. Called on-demand, not every frame."""
-    global _yolo_model
-    if _yolo_model is None:
-        from onnxruntime import YOLO
-        print("Vision: loading YOLOE-26x model...")
-        _yolo_model = YOLO("yoloe-26x-seg-pf.pt")
+    """Run YOLOE-26x (ONNX) on a frame. Called on-demand, not every frame."""
+    global _onnx_session, _class_names, _tracker
+    if _onnx_session is None:
+        print("Vision: loading YOLOE-26x ONNX model...")
+        _onnx_session = ort.InferenceSession(str(_ONNX_PATH))
+        with _NAMES_PATH.open() as f:
+            _class_names = json.load(f)
+        _tracker = sv.ByteTrack(minimum_consecutive_frames=1)
         print("Vision: model loaded")
 
-    results = _yolo_model.track(frame, verbose=False, conf=0.5, persist=True)[0]
-    objects = []
     h, w = frame.shape[:2]
 
-    for box in results.boxes:
-        label = results.names[int(box.cls)]
+    # Preprocess: letterbox, BGR->RGB, normalize, HWC->NCHW
+    padded, scale, dx, dy = _letterbox(frame)
+    blob = padded[:, :, ::-1].astype(np.float32) / 255.0
+    blob = blob.transpose(2, 0, 1)[np.newaxis]
 
-        x1, y1, x2, y2 = box.xyxy[0].tolist()
+    # Inference
+    outputs = _onnx_session.run(None, {"images": blob})
+    dets = outputs[0][0]  # (300, 38): [x1, y1, x2, y2, conf, class_id, 32 mask coeffs]
+
+    # Filter by confidence
+    mask = dets[:, 4] > 0.5
+    dets = dets[mask]
+
+    if len(dets) == 0:
+        return []
+
+    # Scale bboxes from letterbox space back to original frame coordinates
+    bboxes = dets[:, :4].copy()
+    bboxes[:, [0, 2]] = (bboxes[:, [0, 2]] - dx) / scale
+    bboxes[:, [1, 3]] = (bboxes[:, [1, 3]] - dy) / scale
+    bboxes = np.clip(bboxes, 0, [w, h, w, h])
+
+    confidences = dets[:, 4]
+    class_ids = dets[:, 5].astype(int)
+
+    # Track with ByteTrack
+    sv_dets = sv.Detections(
+        xyxy=bboxes,
+        confidence=confidences,
+        class_id=class_ids,
+    )
+    sv_dets = _tracker.update_with_detections(sv_dets)
+
+    # Build output (same format as before)
+    objects = []
+    for i in range(len(sv_dets)):
+        x1, y1, x2, y2 = sv_dets.xyxy[i]
         box_area = (x2 - x1) * (y2 - y1)
         if box_area > 0.5 * w * h:
             continue
 
         cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+        label = _class_names[str(sv_dets.class_id[i])]
 
         obj = {
             "label": label,
             "position_px": [round(cx), round(cy)],
             "bbox": [round(x1), round(y1), round(x2), round(y2)],
-            "confidence": round(float(box.conf), 3),
+            "confidence": round(float(sv_dets.confidence[i]), 3),
         }
 
-        if box.id is not None:
-            obj["track_id"] = int(box.id)
+        if sv_dets.tracker_id is not None and sv_dets.tracker_id[i] is not None:
+            obj["track_id"] = int(sv_dets.tracker_id[i])
 
         objects.append(obj)
 

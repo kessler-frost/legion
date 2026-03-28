@@ -8,14 +8,19 @@ packages = ["brain"]
 [project]
 name = "legion"
 version = "0.1.0"
-requires-python = ">=3.12"
+description = "Swarm robotics with Cyberbricks, orchestrated by Claude Code"
+requires-python = ">=3.12,<3.13"
+license = "Apache-2.0"
+authors = [
+    { name = "Sankalp Sanand", email = "sanandsankalp@gmail.com" },
+]
+
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.34",
     "aiomqtt>=2.3",
     "typer>=0.15",
     "opencv-contrib-python>=4.10",
-    "onnxruntime>=8.3",
     "av>=14",
     "mlx-qwen3-asr>=0.1",
     "claude-agent-sdk>=0.1.48",
@@ -27,9 +32,18 @@ dependencies = [
     "kornia",
     "e3nn",
     "moviepy==1.0.3",
-    "plyfile",
     "pillow-heif",
+    "awesome-depth-anything-3",
+    "onnx>=1.21.0",
+    "onnxslim>=0.1.90",
+    "onnxruntime>=1.24.4",
+    "supervision>=0.25",
 ]
+
+[project.urls]
+Homepage = "https://github.com/kessler-frost/legion"
+Repository = "https://github.com/kessler-frost/legion"
+Issues = "https://github.com/kessler-frost/legion/issues"
 
 [project.scripts]
 legion = "brain.cli:app"
