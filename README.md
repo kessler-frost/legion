@@ -74,10 +74,10 @@ uv sync                          # installs Python 3.12 and all deps
 uv tool install --editable .     # makes `legion` available globally
 ```
 
-You also need the YOLOE-26x ONNX model for object detection (~260MB). Export it once:
+Download the YOLOE-26x ONNX model (~260MB) into the project root:
 
 ```bash
-uv run python scripts/export-yoloe-onnx.py
+curl -L -o yoloe-26x-seg-pf.onnx https://github.com/kessler-frost/legion/releases/download/v0.1.0/yoloe-26x-seg-pf.onnx
 ```
 
 > Pinned to Python 3.12 because `open3d` (a depth model dependency) doesn't support 3.13 yet.
