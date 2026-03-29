@@ -34,8 +34,6 @@ dependencies = [
     "moviepy==1.0.3",
     "pillow-heif",
     "awesome-depth-anything-3",
-    "onnx>=1.21.0",
-    "onnxslim>=0.1.90",
     "onnxruntime>=1.24.4",
     "supervision>=0.25",
 ]

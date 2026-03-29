@@ -23,10 +23,10 @@ USB Webcam → ArUco (every frame) + YOLOE-26x (on demand) + DA3 (on demand)
 
 Runs as a background thread inside the FastAPI server.
 
-- **ArUco**: every frame (<1ms) — bot ID, pixel position, heading, 3D pose
-- **YOLOE-26x**: on-demand via `--objects` flag (~80ms) — 4,585 class detection + tracking
-- **DA3 Metric Depth**: on-demand via `--depth` flag (~250ms) — metric depth in meters per object
-- **Stream**: WebSocket at `/ws/stream` serves JPEG frames with ArUco overlay
+- **ArUco**: every frame (<1ms). Bot ID, pixel position, heading, 3D pose.
+- **YOLOE-26x**: on-demand via `--objects` flag (~80ms). 4,585 class detection + tracking.
+- **DA3 Metric Depth**: on-demand via `--depth` flag (~250ms). Metric depth in meters per object.
+- **Stream**: WebSocket at `/ws/stream` serves JPEG frames with ArUco overlay.
 
 ### Voice Pipeline
 
@@ -57,7 +57,7 @@ Custom MicroPython on CyberBrick ESP32-C3. Connects WiFi STA → MQTT broker →
 
 - **Actions**: `drive` (per-motor speeds), `stop`, `kick`, `kick_stop`
 - **Motor mapping**: Motor 1 = right wheels (positive = forward), Motor 2 = left wheels (inverted)
-- **Servo**: Raw PWM on GPIO 3 — duty(127) = kick, duty(76) = stop
+- **Servo**: Raw PWM on GPIO 3. duty(127) = kick, duty(76) = stop.
 - **Upload**: Arduino Lab for MicroPython over USB-C
 
 ## Tech Stack
@@ -68,7 +68,7 @@ Custom MicroPython on CyberBrick ESP32-C3. Connects WiFi STA → MQTT broker →
 - DA3 Metric Large (depth estimation, on-demand)
 - mlx-qwen3-asr (speech-to-text, Apple Silicon optimized)
 - OpenCV (`opencv-contrib-python` for ArUco + camera)
-- claude-agent-sdk (reasoning — swappable for other agents)
+- claude-agent-sdk (reasoning, swappable for other agents)
 - MicroPython (bot firmware)
 - MQTT (Mosquitto broker, umqtt bot-side)
 - Typer (CLI)
@@ -110,7 +110,7 @@ legion serve start              # foreground
 legion serve start --bg         # background
 legion serve stop
 
-# Bot control — all args required
+# Bot control (all args required)
 legion forward <bot_id> <duration>     # calibrated straight forward
 legion backward <bot_id> <duration>    # calibrated straight backward
 legion left <bot_id> <duration>        # spin left in place
@@ -120,7 +120,7 @@ legion shoot <bot_id> <duration>       # activate flywheel shooter (Bot 2)
 legion stop <bot_id>                   # emergency stop
 
 # Scene queries (requires server running with vision active)
-legion scene state                     # instant — bots only (ArUco)
+legion scene state                     # bots only (ArUco), instant
 legion scene state --objects           # + YOLOE-26x detection (~80ms)
 legion scene state --depth             # + DA3 metric depth (~250ms)
 legion scene state --full              # objects + depth (~300ms)
@@ -129,14 +129,14 @@ legion scene state --full              # objects + depth (~300ms)
 legion snapshot                        # save raw frame + depth data
 ```
 
-After cloning: `uv sync && uv tool install --editable .` — then use `legion` directly.
+After cloning: `uv sync && uv tool install --editable .` then use `legion` directly.
 
 ## Web UI
 
-- **/** — Homepage with links
-- **/command** — Command center: video stream + AI brain + voice control
-- **/control** — Joystick manual bot control
-- **/docs** — Auto-generated API docs
+- **/** Home with links
+- **/command** Command center: video stream + AI brain + voice control
+- **/control** Joystick manual bot control
+- **/docs** Auto-generated API docs
 
 ## Bot Calibration
 
@@ -144,14 +144,14 @@ Each bot has different motor characteristics. Calibration values live in `brain/
 
 ### Bot 1 (SoccerBot, ArUco marker #2)
 - **Straight forward**: L=600, R=1000 (left motor stronger)
-- **Turns**: inconsistent due to surface/battery — use small increments (0.1-0.15s) and re-check heading
+- **Turns**: inconsistent due to surface/battery. Use small increments (0.1-0.15s) and re-check heading.
 - **Heading**: 0°=up, 90°=right, 180°=down, 270°=left (clockwise)
 - **Servo**: 360° servo. Kicker on front of bot. Raw PWM, no ServosController.
 
 ### Bot 2 (Tank, ArUco marker #3)
 - **Drive**: tracks, differential steering
 - **Straight forward**: L=-1000, R=-1000 (motors inverted vs SoccerBot)
-- **Turns**: tracks more consistent than wheels — still use small increments
+- **Turns**: tracks more consistent than wheels. Still use small increments.
 - **Heading**: same convention as Bot 1 (0°=up, 90°=right, clockwise)
 - **Servo**: 360° on S1 (GPIO 3). Flywheel shooter on front. duty(127) = shoot, duty(76) = stop.
 - **Shooter**: ~2s = 1 ball fired
@@ -159,16 +159,16 @@ Each bot has different motor characteristics. Calibration values live in `brain/
 ## Firmware Config
 
 Firmware config files use the `.example` pattern:
-- `firmware/*/config.example.json` — committed template with placeholder values
-- `firmware/*/config.json` — your actual config (gitignored, never committed)
+- `firmware/*/config.example.json` is the committed template with placeholder values
+- `firmware/*/config.json` is your actual config (gitignored, never committed)
 
 Copy the example and fill in your WiFi credentials and broker IP before flashing.
 
 ## Conventions
 
-- All bot commands are structured JSON — no free-form text parsing
+- All bot commands are structured JSON, no free-form text parsing
 - Bot command schema: `{"action": str, "params": dict}` sent to `legion/bot/{id}/command`
 - Use `pathlib.Path` for all file/directory paths
 - Use `uv` for Python dependency management. Run `uv sync` to install, `uv run` to execute.
-- Always use `legion` CLI for server management — never raw uvicorn/nohup
+- Always use `legion` CLI for server management, never raw uvicorn/nohup
 - When using Claude programmatically, use `claude-agent-sdk`, not the `anthropic` package
