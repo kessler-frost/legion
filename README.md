@@ -18,6 +18,8 @@ This was a weekend project, built over a couple of weekends. The inspiration was
 
 This is a collaboration between me and [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Most commits are co-authored by Claude. I haven't polished every edge case so there will be bugs. If you run into something please [open an issue](https://github.com/kessler-frost/legion/issues), I will try to look into it but I can't make any promises.
 
+I know two bots can barely be called a swarm, but the full framework is there and adding more bots should be straightforward.
+
 The architecture is agent-agnostic. The agent interacts with bots entirely through the `legion` CLI, so you could swap Claude Code for [OpenCode](https://github.com/anomalyco/opencode) or any agent that can run shell commands.
 
 ```
