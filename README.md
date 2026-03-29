@@ -4,7 +4,7 @@ Swarm robotics with [Cyberbricks](https://makerworld.com/en/cyberbrick), orchest
 
 ![Demo](docs/demo.gif)
 
-> In this demo, I told the AI to steer Bot 1 to hit Baymax and then have Bot 2 shoot at Bot 1. It coordinated both robots accordingly.
+> In this demo (2x speed, [full video](https://github.com/kessler-frost/legion/releases/download/v0.1.0/demo.mp4)), I told the AI to steer Bot 1 to hit Baymax and then have Bot 2 shoot at Bot 1. It coordinated both robots accordingly.
 
 ## About
 
