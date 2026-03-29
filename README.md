@@ -6,7 +6,7 @@ Swarm robotics with [Cyberbricks](https://makerworld.com/en/cyberbrick), orchest
   <img src="docs/demo.gif" alt="Demo" width="100%">
 </p>
 
-> In this demo (4x speed, [full video](docs/demo.mp4)), I told the agent to steer Bot 1 to hit Baymax and then have Bot 2 shoot at Bot 1. The agent recognized objects in the scene, tracked bot positions and orientations through the camera, reasoned about how to achieve the goal, and coordinated both robots step by step.
+> In this demo (4x speed, [full video](docs/demo.mp4)), I told the agent to steer Bot 1 to kick Baymax and then have Bot 2 shoot at Bot 1. The agent recognized objects in the scene, tracked bot positions and orientations through the camera, reasoned about how to achieve the goal, and coordinated both robots step by step.
 
 ## About
 
