@@ -2,9 +2,11 @@
 
 Swarm robotics with [Cyberbricks](https://makerworld.com/en/cyberbrick), orchestrated by [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
-![Demo](docs/demo.gif)
+<p align="center">
+  <img src="docs/demo.gif" alt="Demo" width="100%">
+</p>
 
-> In this demo (2x speed, [full video](docs/demo.mp4)), I told the AI to steer Bot 1 to hit Baymax and then have Bot 2 shoot at Bot 1. It coordinated both robots accordingly.
+> In this demo (4x speed, [full video](docs/demo.mp4)), I told the AI to steer Bot 1 to hit Baymax and then have Bot 2 shoot at Bot 1. It coordinated both robots accordingly.
 
 ## About
 
