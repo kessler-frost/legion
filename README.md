@@ -4,13 +4,13 @@ Swarm robotics with [Cyberbricks](https://makerworld.com/en/cyberbrick), orchest
 
 https://github.com/kessler-frost/legion/raw/main/docs/demo.mp4
 
-> In this demo, I told the AI agent to "avenge Baymax." It figured out what that meant on its own, located the targets, and coordinated both robots to take them out.
+> In this demo, I told the AI to steer Bot 1 to hit Baymax and then have Bot 2 shoot at Bot 1. It coordinated both robots accordingly.
 
 ## About
 
 Legion lets an AI coding agent control physical robots through natural language. You talk, the AI sees the play area through a webcam, decides what to do, and sends commands to the bots over WiFi.
 
-This is a collaboration between me and [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Most commits are co-authored by Claude. I haven't polished every edge case so there will be bugs. If you run into something, [open an issue](https://github.com/kessler-frost/legion/issues).
+This is a collaboration between me and [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Most commits are co-authored by Claude. I haven't polished every edge case so there will be bugs. If you run into something please [open an issue](https://github.com/kessler-frost/legion/issues), I will try to look into it but I can't make any promises.
 
 The architecture is agent-agnostic. The AI interacts with bots entirely through the `legion` CLI, so you could swap Claude Code for [OpenCode](https://github.com/anomalyco/opencode) or any agent that can run shell commands.
 
