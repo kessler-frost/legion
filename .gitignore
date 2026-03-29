@@ -1,5 +1,6 @@
 # Playwright
 .playwright-cli/
+.playwright/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

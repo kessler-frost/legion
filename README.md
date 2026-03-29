@@ -23,16 +23,24 @@ I know two bots can barely be called a swarm, but the full framework is there an
 The architecture is agent-agnostic. The agent interacts with bots entirely through the `legion` CLI, so you could swap Claude Code for [OpenCode](https://github.com/anomalyco/opencode) or any agent that can run shell commands.
 
 ```
-┌─────────────┐ ┌─────────────────┐ ┌────────────┐ ┌────────────┐ ┌──────┐ ┌────────┐
-│             │ │                 │ │            │ │            │ │      │ │        │
-│ Browser Mic ├►│  Speech-to-Text ├►│   Agent    ├►│ legion CLI ├►│ MQTT ├►│ Robots │
-│             │ │                 │ │            │ │            │ │      │ │        │
-└─────────────┘ └─────────────────┘ └────────────┘ └────────────┘ └──────┘ └────────┘
-┌─────────────┐ ┌─────────────────┐ ┌──────▲─────┐
-│             │ │                 │ │      ┴     │
-│  USB Webcam ├►│ Computer Vision ├►│ Scene JSON │
-│             │ │                 │ │            │
-└─────────────┘ └─────────────────┘ └────────────┘
+   Browser Mic       USB Webcam
+        |                 |
+        v                 v
+  Speech-to-Text    Computer Vision
+        |                 |
+        v                 |
+      Agent               |
+        |                 |
+        +--------+--------+
+                 |
+                 v
+            legion CLI
+                 |
+                 v
+               MQTT
+                 |
+                 v
+              Robots
 ```
 
 ### Vision pipeline
