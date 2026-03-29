@@ -65,7 +65,7 @@ Voice goes through the browser mic to [mlx-qwen3-asr](https://github.com/moona3k
 
 **Hardware:** One or more [CyberBrick](https://makerworld.com/en/cyberbrick) kits (SoccerBot/Tank tested), [ArUco markers](https://chev.me/arucogen/) (4x4_50) on each bot, a USB webcam overhead, and WiFi.
 
-**Software:** [uv](https://docs.astral.sh/uv/), [Mosquitto](https://mosquitto.org/), [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (with [API key](https://console.anthropic.com/)), [Arduino Lab for MicroPython](https://labs.arduino.cc/en/labs/micropython).
+**Software:** [uv](https://docs.astral.sh/uv/), [Mosquitto](https://mosquitto.org/), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Arduino Lab for MicroPython](https://labs.arduino.cc/en/labs/micropython).
 
 ## Getting started
 
