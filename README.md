@@ -6,20 +6,24 @@ Swarm robotics with [Cyberbricks](https://makerworld.com/en/cyberbrick), orchest
   <img src="docs/demo.gif" alt="Demo" width="100%">
 </p>
 
-> In this demo (4x speed, [full video](docs/demo.mp4)), I told the AI to steer Bot 1 to hit Baymax and then have Bot 2 shoot at Bot 1. It coordinated both robots accordingly.
+> In this demo (4x speed, [full video](docs/demo.mp4)), I told the agent to steer Bot 1 to hit Baymax and then have Bot 2 shoot at Bot 1. The agent recognized objects in the scene, tracked bot positions and orientations through the camera, reasoned about how to achieve the goal, and coordinated both robots step by step.
 
 ## About
 
-Legion lets an AI coding agent control physical robots through natural language. You talk, the AI sees the play area through a webcam, decides what to do, and sends commands to the bots over WiFi.
+Legion lets an AI coding agent control physical robots through natural language. You talk, the agent decides what to do, and sends commands to the bots over WiFi.
+
+An important distinction: the agent doesn't use vision capabilities directly. The vision pipeline converts camera data into structured JSON (positions, headings, object labels, distances), and the agent reasons over that JSON. This means any LLM can drive the bots, even ones without vision support.
+
+This was a weekend project, built over a couple of weekends. The inspiration was [this video](#resources-and-inspirations) about giving Claude Code an RC car body, and I had a few CyberBrick kits lying around from backing their Kickstarter a while ago.
 
 This is a collaboration between me and [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Most commits are co-authored by Claude. I haven't polished every edge case so there will be bugs. If you run into something please [open an issue](https://github.com/kessler-frost/legion/issues), I will try to look into it but I can't make any promises.
 
-The architecture is agent-agnostic. The AI interacts with bots entirely through the `legion` CLI, so you could swap Claude Code for [OpenCode](https://github.com/anomalyco/opencode) or any agent that can run shell commands.
+The architecture is agent-agnostic. The agent interacts with bots entirely through the `legion` CLI, so you could swap Claude Code for [OpenCode](https://github.com/anomalyco/opencode) or any agent that can run shell commands.
 
 ```
 ┌─────────────┐ ┌─────────────────┐ ┌──────────┐ ┌────────────┐ ┌──────┐ ┌────────┐
 │             │ │                 │ │          │ │            │ │      │ │        │
-│  USB Webcam ├►│ Computer Vision ├►│ AI Agent ├►│ legion CLI ├►│ MQTT ├►│ Robots │
+│  USB Webcam ├►│ Computer Vision ├►│  Agent   ├►│ legion CLI ├►│ MQTT ├►│ Robots │
 │             │ │                 │ │          │ │            │ │      │ │        │
 └─────────────┘ └─────────────────┘ └──────────┘ └────────────┘ └──────┘ └────────┘
 ┌─────────────┐ ┌─────────────────┐       ▲
@@ -102,7 +106,7 @@ machine.reset()  # restarts the bot, runs boot.py then main.py
 
 ```bash
 mosquitto -d          # start MQTT broker
-legion serve start    # start server + vision + AI agent
+legion serve start    # start server + vision + agent
 ```
 
 Open [localhost:8000/command](http://localhost:8000/command) and start talking.
@@ -132,7 +136,7 @@ legion scene state --full       # everything (~300ms)
 | URL | What |
 |-----|------|
 | `/` | Home |
-| `/command` | Command center: camera + AI chat + voice |
+| `/command` | Command center: camera + agent chat + voice |
 | `/control` | Manual joystick control |
 | `/docs` | API docs |
 
@@ -143,10 +147,12 @@ legion scene state --full       # everything (~300ms)
 3. Add motor calibration + marker mapping in `brain/cli.py`
 4. Flash via Arduino Lab for MicroPython
 
-## Resources
+## Resources and inspirations
 
+- [Claude Code RC Car (YouTube)](https://www.youtube.com/watch?v=jBpQiv-ZlVM&t), the inspiration for this project
 - [CyberBrick Official Repo](https://github.com/CyberBrick-Official/CyberBrick_Controller_Core)
 - [CyberBrick API Docs](https://makerworld.com/en/cyberbrick/api-doc/)
+- [mlx-qwen3-asr](https://github.com/moona3k/mlx-qwen3-asr), the local speech-to-text model used for voice commands
 
 ## License
 
