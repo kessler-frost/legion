@@ -12,7 +12,7 @@ Swarm robotics with [Cyberbricks](https://makerworld.com/en/cyberbrick), orchest
 
 Legion lets an AI coding agent control physical robots through natural language. You talk, the agent decides what to do, and sends commands to the bots over WiFi.
 
-An important distinction: the agent doesn't use vision capabilities directly. The vision pipeline converts camera data into structured JSON (positions, headings, object labels, distances), and the agent reasons over that JSON. This means any LLM can drive the bots, even ones without vision support.
+An important distinction: the agent doesn't use an LLM's built-in vision, which is too slow for real-time control. Instead, a custom vision pipeline turns a single camera frame into structured JSON (positions, headings, object labels, metric depth) in ~300ms, and the agent reasons over that. Any LLM can drive the bots, even ones with no vision support.
 
 This was a weekend project, built over a couple of weekends. The inspiration was [this video](#resources-and-inspirations) about giving Claude Code an RC car body, and I had a few CyberBrick kits lying around from backing their Kickstarter a while ago.
 
